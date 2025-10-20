@@ -2,7 +2,12 @@ HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
-!**/src/test/**/target/
+
+### Test files ###
+src/test/
+**/test/
+**/*Test.java
+**/*Tests.java
 
 ### STS ###
 .apt_generated
