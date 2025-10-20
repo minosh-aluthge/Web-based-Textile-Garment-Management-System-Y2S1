@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>TGMS — Sign in</title>
+	<link rel="stylesheet" href="css/style.css">
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+</head>
+<body class="login-body">
+	<div class="login-overlay"></div>
+	<div class="login-container">
+		<div class="login-card">
+			<div class="login-header">
+				<div class="login-logo">
+					<i class="fas fa-cut"></i>
+					<i class="fas fa-tshirt"></i>
+				</div>
+				<h1>Textile & Garment Management System</h1>
+				<p id="loginSubtitle">Welcome back. Please sign in to continue.</p>
+			<!-- Tabs -->
+			<div id="authTabs" class="nav-tabs" style="margin-bottom:18px;">
+				<button id="tabSignUp" class="nav-tab" type="button"><i class="fas fa-user-plus"></i> Sign Up</button>
+			</div>
+			<!-- Sign In -->
+            <form id="signInForm" class="login-form" onsubmit="return handleSignIn(event);">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input id="email" type="email" required placeholder="you@company.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input id="password" type="password" required placeholder="••••••••">
+                </div>
+                <div id="signInAlert" style="display:none;color:#e74c3c;margin:8px 0;font-weight:600;"></div>
+                <div class="login-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-right-to-bracket"></i> Sign in</button>
+                    <a class="forgot-link" href="#" id="forgotLink">Forgot password?</a>
+                </div>
+            </form>
+
+			<!-- Sign Up -->
+            <form id="signUpForm" class="login-form" style="display:none;" onsubmit="return handleSignUp(event);">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input id="name" type="text" required placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label for="email2">Email</label>
+                    <input id="email2" type="email" required placeholder="you@company.com">
+                </div>
+                <div class="form-group">
+                    <label for="password2">Password</label>
+                    <input id="password2" type="password" required placeholder="Create a password">
+                </div>
+                <div class="form-group">
+                    <label for="confirm2">Confirm Password</label>
+                    <input id="confirm2" type="password" required placeholder="Repeat password">
+                </div>
+                <div id="signUpAlert" style="display:none;color:#e67e22;margin:8px 0;font-weight:600;"></div>
+                <div class="login-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create account</button>
+                    <a class="forgot-link" href="#" id="backToSignIn">Back to Sign In</a>
+                </div>
+            </form>
+            </div>
+		</div>
+	</div>
+    <!-- Forgot Password Modal -->
+    <div id="forgotModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-key"></i> Reset Password</h3>
+                <span class="close" id="forgotClose">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="forgotForm">
+                    <div class="form-group">
+                        <label for="emailF">Registered Email</label>
+                        <input id="emailF" type="email" required placeholder="you@company.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPass">New Password</label>
+                        <input id="newPass" type="password" required placeholder="At least 4 characters">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPass">Confirm New Password</label>
+                        <input id="confirmPass" type="password" required placeholder="Repeat new password">
+                    </div>
+                    <div id="forgotAlert" style="display:none;color:#e67e22;margin:8px 0;font-weight:600;"></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="forgotCancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Reset Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        const USERS_KEY = 'tgms_users_v1';
+        function loadUsers(){ try { return JSON.parse(localStorage.getItem(USERS_KEY)||'[]'); } catch { return []; } }
+        function saveUsers(list){ try { localStorage.setItem(USERS_KEY, JSON.stringify(list)); } catch(e) { console.error(e); } }
+        const LOG_KEY = 'tgms_activity_logs';
+        const CUR_USER_KEY = 'tgms_current_user';
+        function loadLogs(){ try { return JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); } catch { return []; } }
+        function saveLogs(list){ try { localStorage.setItem(LOG_KEY, JSON.stringify(list)); } catch(e){ console.error(e); } }
+        function logActivity(action, details, email){
+            const logs = loadLogs();
+            logs.push({ time: new Date().toISOString(), user: (email||'guest'), action, details });
+            saveLogs(logs);
+        }
+
+        const tabUp = document.getElementById('tabSignUp');
+        const formIn = document.getElementById('signInForm');
+        const formUp = document.getElementById('signUpForm');
+        const subtitle = document.getElementById('loginSubtitle');
+        const back = document.getElementById('backToSignIn');
+        const signInAlert = document.getElementById('signInAlert');
+        const signUpAlert = document.getElementById('signUpAlert');
+        const forgotLink = document.getElementById('forgotLink');
+        const forgotModal = document.getElementById('forgotModal');
+        const forgotClose = document.getElementById('forgotClose');
+        const forgotCancel = document.getElementById('forgotCancel');
+        const forgotForm = document.getElementById('forgotForm');
+        const forgotAlert = document.getElementById('forgotAlert');
+
+        // Stubs for inline onsubmit attributes to prevent errors and default submission
+        window.handleSignIn = function(e){ if (e && e.preventDefault) e.preventDefault(); return false; };
+        window.handleSignUp = function(e){ if (e && e.preventDefault) e.preventDefault(); return false; };
+
+        function consumeReturnTo(defaultUrl){
+            // Requirement: after sign in, go to Roles. Ignore any stored return target.
+            try { localStorage.removeItem('tgms_return_to'); } catch {}
+            return defaultUrl || 'roles.html';
+        }
+
+        function showUp(){
+            tabUp.classList.add('active');
+            formIn.style.display = 'none';
+            formUp.style.display = '';
+            subtitle.textContent = 'Create your account to get started.';
+            if (signInAlert) { signInAlert.style.display='none'; signInAlert.textContent=''; }
+        }
+        function showIn(){
+            tabUp.classList.remove('active');
+            formIn.style.display = '';
+            formUp.style.display = 'none';
+            subtitle.textContent = 'Welcome back. Please sign in to continue.';
+            if (signUpAlert) { signUpAlert.style.display='none'; signUpAlert.textContent=''; }
+        }
+
+        tabUp.addEventListener('click', showUp);
+        if (back) back.addEventListener('click', function(e){ e.preventDefault(); showIn(); });
+
+        function openForgot(){ forgotModal.style.display='block'; forgotAlert.style.display='none'; forgotAlert.textContent=''; }
+        function closeForgot(){ forgotModal.style.display='none'; }
+        if (forgotLink) forgotLink.addEventListener('click', function(e){ e.preventDefault(); openForgot(); });
+        if (forgotClose) forgotClose.addEventListener('click', closeForgot);
+        if (forgotCancel) forgotCancel.addEventListener('click', closeForgot);
+
+        // Handle Sign In: only allow previously signed-up users
+        formIn.addEventListener('submit', function(e){
+            e.preventDefault();
+            const email = (document.getElementById('email').value||'').trim().toLowerCase();
+            const pass = (document.getElementById('password').value||'');
+            const users = loadUsers();
+            const found = users.find(u => u.email === email && u.password === pass);
+            if (!found) {
+                signInAlert.textContent = 'Invalid credentials or account not found. Please sign up first.';
+                signInAlert.style.display = 'block';
+                return;
+            }
+            // Success -> proceed
+            try { localStorage.setItem(CUR_USER_KEY, JSON.stringify(found)); } catch {}
+            logActivity('LOGIN', 'Successful login', found.email);
+            window.location.href = consumeReturnTo('roles.html');
+        });
+
+        // Handle Sign Up: create account and redirect
+        formUp.addEventListener('submit', function(e){
+            e.preventDefault();
+            const name = (document.getElementById('name').value||'').trim();
+            const email = (document.getElementById('email2').value||'').trim().toLowerCase();
+            const pass = document.getElementById('password2').value||'';
+            const confirm = document.getElementById('confirm2').value||'';
+            if (pass.length < 4) { signUpAlert.textContent='Password must be at least 4 characters.'; signUpAlert.style.display='block'; return; }
+            if (pass !== confirm) { signUpAlert.textContent='Passwords do not match.'; signUpAlert.style.display='block'; return; }
+            const users = loadUsers();
+            if (users.some(u => u.email === email)) { signUpAlert.textContent='An account with this email already exists.'; signUpAlert.style.display='block'; return; }
+            const newUser = { name, email, password: pass };
+            users.push(newUser);
+            saveUsers(users);
+            // Optional: auto sign-in after sign-up
+            try { localStorage.setItem(CUR_USER_KEY, JSON.stringify(newUser)); } catch {}
+            logActivity('SIGN_UP', 'New account created', email);
+            window.location.href = consumeReturnTo('roles.html');
+        });
+
+        // Handle Forgot Password: update password for existing user
+        forgotForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const email = (document.getElementById('emailF').value||'').trim().toLowerCase();
+            const np = document.getElementById('newPass').value||'';
+            const cp = document.getElementById('confirmPass').value||'';
+            if (np.length < 4) { forgotAlert.textContent='New password must be at least 4 characters.'; forgotAlert.style.display='block'; return; }
+            if (np !== cp) { forgotAlert.textContent='Passwords do not match.'; forgotAlert.style.display='block'; return; }
+            const users = loadUsers();
+            const idx = users.findIndex(u => u.email === email);
+            if (idx === -1) { forgotAlert.textContent='No account found with this email.'; forgotAlert.style.display='block'; return; }
+            users[idx].password = np;
+            saveUsers(users);
+            closeForgot();
+            showIn();
+            signInAlert.textContent = 'Password reset successful. Please sign in.';
+            signInAlert.style.display = 'block';
+            logActivity('RESET_PASSWORD', 'Password updated', email);
+        });
+    })();
+    </script>
+
+</body>
+</html>
+

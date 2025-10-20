@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>TGMS — Support & Feedback</title>
+	<link rel="stylesheet" href="css/style.css">
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+	<div class="container">
+		<header class="header">
+			<div class="header-content">
+				<h1><i class="fas fa-headset"></i> Support & Feedback</h1>
+				<p>Respond to feedback and track activity logs</p>
+				<div class="header-links">
+					<a href="roles.html" class="btn btn-secondary"><i class="fas fa-house"></i> Roles</a>
+				</div>
+			</div>
+		</header>
+
+		<div class="section-header">
+			<h2><i class="fas fa-comment-dots"></i> User Feedback</h2>
+			<button class="btn btn-primary" onclick="openNewModal()"><i class="fas fa-plus"></i> New</button>
+		</div>
+		<div class="table-container">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>User</th>
+						<th>Message</th>
+						<th>Type</th>
+						<th>Status</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody id="fbBody"></tbody>
+			</table>
+		</div>
+
+		<div class="section-header" style="margin-top:30px;">
+			<h2><i class="fas fa-list"></i> Activity Logs</h2>
+		</div>
+		<div class="table-container">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Time</th>
+						<th>User</th>
+						<th>Action</th>
+						<th>Details</th>
+					</tr>
+				</thead>
+				<tbody id="logBody"></tbody>
+			</table>
+		</div>
+	</div>
+
+	<!-- New Feedback Modal -->
+	<div id="newFeedbackModal" class="modal" style="display:none;">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3><i class="fas fa-plus-circle"></i> New Feedback</h3>
+				<span class="close" onclick="closeNewModal()">&times;</span>
+			</div>
+			<div class="modal-body">
+				<form id="newFeedbackForm">
+					<div class="form-group">
+						<label for="nfSubmittedBy">Submitted By</label>
+						<input type="text" id="nfSubmittedBy" required />
+					</div>
+					<div class="form-group">
+						<label for="nfSubject">Subject</label>
+						<input type="text" id="nfSubject" required />
+					</div>
+					<div class="form-group">
+						<label for="nfDescription">Description</label>
+						<textarea id="nfDescription" rows="3" required></textarea>
+					</div>
+					<div class="form-group">
+						<label for="nfType">Type</label>
+						<select id="nfType">
+							<option>Complaint</option>
+							<option>Suggestion</option>
+							<option>Appreciation</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="nfPriority">Priority</label>
+						<select id="nfPriority">
+							<option>Low</option>
+							<option>Medium</option>
+							<option>High</option>
+						</select>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" onclick="closeNewModal()">Cancel</button>
+						<button type="submit" class="btn btn-primary">Create</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<script>
+	const LOG_KEY = 'tgms_activity_logs';
+	function loadLogs(){ try { return JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); } catch { return []; } }
+	function saveLogs(list){ try { localStorage.setItem(LOG_KEY, JSON.stringify(list)); } catch(e){ console.error(e); } }
+	function addLog(action, details, user){
+		const all = loadLogs();
+		const entry = { time: new Date().toISOString(), user: user||'system', action, details };
+		all.push(entry);
+		saveLogs(all);
+		return entry;
+	}
+
+	function statusBadge(status){
+		const s = (status||'').toString();
+		if (s==='New' || s==='OPEN') return 'status-processing';
+		if (s==='Resolved') return 'status-confirmed';
+		if (s==='Removed') return 'status-cancelled';
+		return 'status-pending';
+	}
+
+	async function loadFeedback(){
+		const body = document.getElementById('fbBody');
+		try{
+			const res = await fetch('/api/support/feedback');
+			const list = res.ok ? await res.json() : [];
+			body.innerHTML = (list||[]).map(f => `
+				<tr>
+					<td class="fb-user">${f.submittedBy||'-'}</td>
+					<td class="fb-msg"><div class="emp-name">${f.subject||'-'}</div><div class="emp-meta">${(f.description||'').substring(0,120)}</div></td>
+					<td>
+						<select onchange="categorize(${f.id}, this.value)">
+							<option ${f.type==='Complaint'?'selected':''}>Complaint</option>
+							<option ${f.type==='Suggestion'?'selected':''}>Suggestion</option>
+							<option ${f.type==='Appreciation'?'selected':''}>Appreciation</option>
+						</select>
+					</td>
+					<td><span class="status-badge ${statusBadge(f.status)}">${f.status}</span></td>
+					<td>
+						<div class="action-buttons">
+							<button class="action-btn btn-primary" title="In Progress" onclick="setStatus(${f.id}, 'InProgress')"><i class="fas fa-play"></i></button>
+							<button class="action-btn btn-success" title="Resolve" onclick="setStatus(${f.id}, 'Resolved')"><i class="fas fa-check"></i></button>
+							<button class="action-btn btn-warning" title="Clarify" onclick="clarify(${f.id})"><i class="fas fa-question"></i></button>
+							<button class="action-btn btn-danger" title="Spam/Remove" onclick="markSpam(${f.id})"><i class="fas fa-ban"></i></button>
+						</div>
+					</td>
+				</tr>`).join('');
+		} catch(e){ console.error(e); body.innerHTML = '<tr><td colspan="5" class="text-center">Failed to load</td></tr>'; }
+	}
+
+	async function createFeedback(payload){
+		const res = await fetch('/api/support/feedback', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+		if (!res.ok) throw new Error('create failed');
+		return res.json();
+	}
+	async function categorize(id, type){
+		await fetch(`/api/support/feedback/${id}/categorize?type=${encodeURIComponent(type)}`, { method:'POST' });
+		await loadFeedback();
+	}
+	async function setStatus(id, status){
+		await fetch(`/api/support/feedback/${id}/status?status=${encodeURIComponent(status)}`, { method:'POST' });
+		await loadFeedback();
+	}
+	async function markSpam(id){
+		await fetch(`/api/support/feedback/${id}/spam`, { method:'POST' });
+		await loadFeedback();
+	}
+	async function clarify(id){
+		await fetch(`/api/support/feedback/${id}/clarify`, { method:'POST' });
+		await loadFeedback();
+	}
+
+	function renderLogs(){
+		const stored = loadLogs();
+		stored.sort((a,b)=> new Date(b.time) - new Date(a.time));
+		const rows = stored.map(l => `
+			<tr>
+				<td>${new Date(l.time).toLocaleString()}</td>
+				<td>${l.user||''}</td>
+				<td>${l.action||''}</td>
+				<td>${l.details||''}</td>
+			</tr>
+		`).join('');
+		document.getElementById('logBody').innerHTML = rows || '<tr><td colspan="4" class="text-center">No activity recorded yet</td></tr>';
+	}
+
+	function openNewModal(){ document.getElementById('newFeedbackModal').style.display='block'; }
+	function closeNewModal(){ document.getElementById('newFeedbackModal').style.display='none'; }
+
+	document.addEventListener('DOMContentLoaded', () => {
+		loadFeedback();
+		renderLogs();
+		const form = document.getElementById('newFeedbackForm');
+		if (form){
+			form.addEventListener('submit', async (e)=>{
+				e.preventDefault();
+				const payload = {
+					submittedBy: document.getElementById('nfSubmittedBy').value.trim(),
+					subject: document.getElementById('nfSubject').value.trim(),
+					description: document.getElementById('nfDescription').value.trim(),
+					type: document.getElementById('nfType').value,
+					priority: document.getElementById('nfPriority').value
+				};
+				await createFeedback(payload);
+				closeNewModal();
+				await loadFeedback();
+			});
+		}
+	});
+	</script>
+
+</body>
+</html>

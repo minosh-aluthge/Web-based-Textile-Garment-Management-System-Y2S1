@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TGMS — Attendance & Leave (Fixed)</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <style>
+    /* Smaller attendance action buttons */
+    .att-actions .btn-sm {
+      padding: 2px 8px;
+      font-size: 11px;
+      line-height: 1.1;
+      border-radius: 6px;
+      margin-right: 6px;
+    }
+    .att-actions .btn-sm:last-child { margin-right: 0; }
+    /* Make compact list cleaner */
+    .compact-list { list-style: none; padding-left: 0; margin: 8px 0 0; }
+    .compact-list li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <h1><i class="fas fa-clipboard-user"></i> Attendance & Leave</h1>
+        <p>Daily attendance, leave requests</p>
+        <div class="header-links">
+          <a href="roles.html" class="btn btn-secondary"><i class="fas fa-house"></i> Roles</a>
+        </div>
+      </div>
+    </header>
+
+    <div class="section-header">
+      <h2><i class="fas fa-calendar-check"></i> Today's Attendance</h2>
+      <div>
+        <button class="btn btn-primary" id="btnAllPresent"><i class="fas fa-user-check"></i> Mark All Present</button>
+        <span id="savedBadge" class="status-badge status-confirmed" style="display:none;margin-left:10px;">Saved</span>
+      </div>
+    </div>
+
+    <div class="att-grid" id="attGrid"></div>
+
+    <!-- Today's Summary -->
+    <div class="section-header" style="margin-top:20px;">
+      <h2><i class="fas fa-users"></i> Today's Summary</h2>
+    </div>
+    <div id="attSummary" class="reports-grid">
+      <div class="report-card">
+        <h3>Present (<span id="cntPresent">0</span>)</h3>
+        <ul id="listPresent" class="compact-list"></ul>
+      </div>
+      <div class="report-card">
+        <h3>Late (<span id="cntLate">0</span>)</h3>
+        <ul id="listLate" class="compact-list"></ul>
+      </div>
+      <div class="report-card">
+        <h3>Absent (<span id="cntAbsent">0</span>)</h3>
+        <ul id="listAbsent" class="compact-list"></ul>
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-top:30px;">
+      <h2><i class="fas fa-plane-departure"></i> Leave Requests</h2>
+      <button class="btn btn-secondary" id="btnNewLeave"><i class="fas fa-plus"></i> New Request</button>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Today</th>
+            <th>Dates</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="leaveBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Leave Modal -->
+  <div id="leaveModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-plane-departure"></i> New Leave Request</h3>
+        <span class="close" id="closeLeave">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="leaveForm">
+          <div class="form-group">
+            <label for="lvName">Employee</label>
+            <select id="lvName" required></select>
+          </div>
+          <div class="form-group">
+            <label for="lvStart">Start Date</label>
+            <input type="date" id="lvStart" required />
+          </div>
+          <div class="form-group">
+            <label for="lvEnd">End Date</label>
+            <input type="date" id="lvEnd" />
+          </div>
+          <div class="form-group">
+            <label for="lvType">Type</label>
+            <select id="lvType" required>
+              <option value="Annual">Annual</option>
+              <option value="Sick">Sick</option>
+              <option value="Casual">Casual</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btnCancelLeave">Cancel</button>
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Data and storage keys
+    // Employees loaded from backend to obtain IDs for persistence
+    let employees = [];
+    // name -> id for quick lookup
+    let EMP_INDEX = {};
+    const ATT_KEY_PREFIX = 'tgms_attendance_';
+    const LEAVE_KEY = 'tgms_leave_requests_v1';
+    let leave = [];
+
+    // Utils
+    function todayKey(){ return new Date().toISOString().slice(0,10); }
+    function nowTime(){ const d=new Date(); const hh=String(d.getHours()).padStart(2,'0'); const mm=String(d.getMinutes()).padStart(2,'0'); return `${hh}:${mm}`; }
+    function loadAttendance(){ try { return JSON.parse(localStorage.getItem(ATT_KEY_PREFIX + todayKey()) || '{}'); } catch { return {}; } }
+    function saveAttendance(map){ localStorage.setItem(ATT_KEY_PREFIX + todayKey(), JSON.stringify(map)); showSaved(); }
+    function loadLeave(){ try { return JSON.parse(localStorage.getItem(LEAVE_KEY) || '[]'); } catch { return []; } }
+    function saveLeave(){ localStorage.setItem(LEAVE_KEY, JSON.stringify(leave)); }
+
+    function showSaved(){
+      const b = document.getElementById('savedBadge');
+      b.style.display = 'inline-block';
+      setTimeout(()=> b.style.display = 'none', 1200);
+    }
+
+    // Attendance UI
+    function renderAttendance(){
+      const grid = document.getElementById('attGrid');
+      const map = loadAttendance();
+      grid.innerHTML = employees.map(n => `
+        <div class="att-card">
+          <div class="avatar">${n.split(' ').map(p=>p[0]).join('').slice(0,2)}</div>
+          <div class="att-name">${n}</div>
+          <div class="att-actions">
+            <button class="btn btn-success btn-sm ${(map[n]?.status||map[n])==='Present'?'active':''}" data-name="${n}" data-status="Present">Present</button>
+            <button class="btn btn-warning btn-sm ${(map[n]?.status||map[n])==='Late'?'active':''}" data-name="${n}" data-status="Late">Late</button>
+            <button class="btn btn-danger  btn-sm ${(map[n]?.status||map[n])==='Absent'?'active':''}" data-name="${n}" data-status="Absent">Absent</button>
+          </div>
+        </div>
+      `).join('');
+
+      // Attach listeners
+      grid.querySelectorAll('.att-actions .btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const name = btn.dataset.name;
+          const status = btn.dataset.status;
+          const map = loadAttendance();
+          // store object with status and time (backward compatible)
+          map[name] = { status, time: nowTime() };
+          saveAttendance(map);
+          // persist to backend
+          persistAttendanceByName(name, status).catch(console.error);
+          renderAttendance();
+          renderLeave();
+          renderSummary();
+        });
+      });
+    }
+
+    function markAllPresent(){
+      const map = {};
+      const t = nowTime();
+      employees.forEach(n => map[n] = { status: 'Present', time: t });
+      saveAttendance(map);
+      // persist all to backend (fire-and-forget)
+      const today = todayKey();
+      employees.forEach(name => {
+        persistAttendanceByName(name, 'Present', today).catch(console.error);
+      });
+      renderAttendance();
+      renderLeave();
+      renderSummary();
+    }
+
+    // Leave UI
+    function attBadge(entry){
+      if (!entry) return '<span class="status-badge">—</span>';
+      const status = typeof entry === 'string' ? entry : entry.status;
+      const time = typeof entry === 'string' ? '' : (entry.time || '');
+      const cls = status==='Present' ? 'status-confirmed' : (status==='Late' ? 'status-pending' : 'status-cancelled');
+      const timeHtml = time ? ` <small style="opacity:.75">(${time})</small>` : '';
+      return `<span class="status-badge ${cls}">${status}${timeHtml}</span>`;
+    }
+
+    function renderLeave(){
+      const body = document.getElementById('leaveBody');
+      const att = loadAttendance();
+      if (!leave || leave.length === 0){
+        body.innerHTML = '<tr><td colspan="6" class="text-center">No leave requests</td></tr>';
+        return;
+      }
+      body.innerHTML = leave.map((r,idx) => `
+        <tr>
+          <td>${r.name}</td>
+          <td>${attBadge(att[r.name])}</td>
+          <td>${r.range}</td>
+          <td>${r.type}</td>
+          <td><span class="status-badge ${r.status==='APPROVED'?'status-confirmed':r.status==='PENDING'?'status-pending':'status-cancelled'}">${r.status}</span></td>
+          <td>
+            <div class="action-buttons">
+              <button class="action-btn btn-warning" data-action="approve" data-idx="${idx}"><i class="fas fa-check"></i></button>
+              <button class="action-btn btn-danger"  data-action="reject"  data-idx="${idx}"><i class="fas fa-xmark"></i></button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      // Row actions
+      body.querySelectorAll('[data-action="approve"]').forEach(b => b.addEventListener('click', e => { const i = +b.dataset.idx; leave[i].status='APPROVED'; saveLeave(); renderLeave(); }));
+      body.querySelectorAll('[data-action="reject"]').forEach(b => b.addEventListener('click', e => { const i = +b.dataset.idx; leave[i].status='REJECTED'; saveLeave(); renderLeave(); }));
+    }
+
+    // Summary UI
+    function renderSummary(){
+      const map = loadAttendance();
+      const getStatus = n => (map[n]?.status || map[n]);
+      const getTime = n => (map[n]?.time || '');
+      const present = employees.filter(n => getStatus(n) === 'Present');
+      const late    = employees.filter(n => getStatus(n) === 'Late');
+      const absent  = employees.filter(n => getStatus(n) === 'Absent');
+
+      document.getElementById('cntPresent').textContent = present.length;
+      document.getElementById('cntLate').textContent    = late.length;
+      document.getElementById('cntAbsent').textContent  = absent.length;
+
+      const toLi = arr => arr.map(n => {
+        const t = getTime(n);
+        return `<li>${n}${t?` <small style="opacity:.7">(${t})</small>`:''}</li>`;
+      }).join('') || '<li>—</li>';
+      document.getElementById('listPresent').innerHTML = toLi(present);
+      document.getElementById('listLate').innerHTML    = toLi(late);
+      document.getElementById('listAbsent').innerHTML  = toLi(absent);
+    }
+
+    function openLeaveModal(){
+      const sel = document.getElementById('lvName');
+      sel.innerHTML = employees.map(n=>`<option value="${n}">${n}</option>`).join('');
+      document.getElementById('leaveForm').reset();
+      document.getElementById('leaveModal').style.display='block';
+    }
+    function closeLeaveModal(){ document.getElementById('leaveModal').style.display='none'; }
+
+    // Backend integration helpers
+    async function loadEmployeesFromBackend(){
+      try {
+        const res = await fetch('/api/hr/employees');
+        const data = await res.json();
+        // build arrays and index
+        employees = (data || []).map(e => e.name);
+        EMP_INDEX = Object.fromEntries((data || []).map(e => [e.name, e.id]));
+      } catch (e) { console.error('Failed to load employees', e); }
+    }
+
+    async function persistAttendanceByName(name, status, date){
+      const empId = EMP_INDEX[name];
+      if (!empId) return;
+      const params = new URLSearchParams({ empId: String(empId), status: status || 'Present' });
+      if (date) params.set('date', date);
+      try {
+        await fetch(`/api/hr/attendance/mark?${params.toString()}`, { method: 'POST' });
+      } catch (e) { console.error('Persist attendance failed', e); }
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', async () => {
+      // wire buttons
+      document.getElementById('btnAllPresent').addEventListener('click', markAllPresent);
+      document.getElementById('btnNewLeave').addEventListener('click', openLeaveModal);
+      document.getElementById('btnCancelLeave').addEventListener('click', closeLeaveModal);
+      document.getElementById('closeLeave').addEventListener('click', closeLeaveModal);
+
+      // load employees then data
+      await loadEmployeesFromBackend();
+      leave = loadLeave();
+      renderAttendance();
+      renderLeave();
+      renderSummary();
+
+      // submit leave
+      document.getElementById('leaveForm').addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const name = document.getElementById('lvName').value;
+        const s = document.getElementById('lvStart').value;
+        const eDate = document.getElementById('lvEnd').value;
+        const type = document.getElementById('lvType').value;
+        const range = eDate && eDate !== s ? `${s} → ${eDate}` : s;
+        leave.push({ name, range, type, status:'PENDING' });
+        saveLeave();
+        renderLeave();
+        closeLeaveModal();
+      });
+    });
+  </script>
+</body>
+</html>

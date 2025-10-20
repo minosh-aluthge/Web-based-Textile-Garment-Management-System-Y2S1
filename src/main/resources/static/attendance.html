@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>TGMS — Attendance & Leave</title>
+	<link rel="stylesheet" href="css/style.css">
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+	<!-- Unified header (same structure as qc.html) -->
+	<header class="header">
+		<div class="container">
+			<div class="header-content">
+				<h1 class="logo">TGMS</h1>
+				<nav class="nav">
+					<a href="roles.html" class="nav-link">Roles</a>
+					<a href="dashboard.html" class="nav-link">Production</a>
+					<a href="index.html#app" class="nav-link">Sales & Orders</a>
+					<a href="hr.html" class="nav-link">HR</a>
+					<a href="qc.html" class="nav-link">Quality</a>
+					<a href="attendance.html" class="nav-link active">Attendance</a>
+					<a href="support.html" class="nav-link">Support</a>
+				</nav>
+				<div class="user-menu">
+					<span class="user-name">Attendance</span>
+					<a href="login.html" class="logout-btn">Logout</a>
+				</div>
+			</div>
+		</div>
+	</header>
+
+	<main class="main">
+		<div class="container">
+			<div class="section-header">
+				<h2><i class="fas fa-calendar-check"></i> Attendance & Leave Management</h2>
+				<div>
+					<button class="btn btn-primary" onclick="markAllPresent()"><i class="fas fa-user-check"></i> Mark All Present</button>
+					<button class="btn btn-secondary" onclick="openLeaveModal()"><i class="fas fa-plane-departure"></i> New Leave Request</button>
+					<span id="savedBadge" class="status-badge status-confirmed" style="display:none;margin-left:10px;">Saved</span>
+				</div>
+			</div>
+
+		<div class="table-container">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Employee</th>
+						<th>Today</th>
+						<th>Dates</th>
+						<th>Type</th>
+						<th>Status</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody id="leaveBody"></tbody>
+			</table>
+		</div>
+
+		<!-- Leave Request Modal (compatible with existing JS) -->
+		<div id="leaveModal" class="modal" style="display:none;">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h3><i class="fas fa-suitcase-rolling"></i> New Leave Request</h3>
+					<span class="close" onclick="closeLeaveModal()">&times;</span>
+				</div>
+				<div class="modal-body">
+					<form id="leaveForm">
+						<div class="form-row">
+							<div class="form-group">
+								<label for="lvName">Employee</label>
+								<select id="lvName"></select>
+							</div>
+							<div class="form-group">
+								<label for="lvType">Type</label>
+								<select id="lvType">
+									<option>Annual</option>
+									<option>Sick</option>
+									<option>Casual</option>
+									<option>Unpaid</option>
+								</select>
+							</div>
+						</div>
+						<div class="form-row">
+							<div class="form-group">
+								<label for="lvStart">Start Date</label>
+								<input type="date" id="lvStart" required>
+							</div>
+							<div class="form-group">
+								<label for="lvEnd">End Date</label>
+								<input type="date" id="lvEnd">
+							</div>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="secondary-btn" onclick="closeLeaveModal()">Cancel</button>
+							<button type="submit" class="primary-btn">Submit Request</button>
+						</div>
+					</form>
+				</div>
+		</div>
+
+		</div>
+	</main>
+
+	<footer class="footer">
+		<div class="container">
+			<p>&copy; 2025 TGMS - Developed by SLIIT Team | SE2030 Software Engineering</p>
+		</div>
+	</footer>
+
+		<script>
+
+		    const LEAVE_KEY = 'tgms_leave_records';
+    let leave = [];
+    // Employees and index loaded from backend for persistence
+    let employees = [];
+    let EMP_INDEX = {};
+
+        function attBadge(status){
+            if (!status) return '<span class="status-badge">—</span>';
+            const cls = status==='Present' ? 'status-confirmed' : status==='Late' ? 'status-pending' : 'status-cancelled';
+            return `<span class="status-badge ${cls}">${status}</span>`;
+        }
+
+        function renderLeave() {
+            const body = document.getElementById('leaveBody');
+            const att = loadAttendance();
+            if (!leave || leave.length === 0){
+                body.innerHTML = '<tr><td colspan="6" class="text-center">No leave requests</td></tr>';
+                return;
+            }
+            body.innerHTML = leave.map((r,idx) => `
+                <tr>
+                    <td>${r.name}</td>
+                    <td>${attBadge(att[r.name])}</td>
+                    <td>${r.range}</td>
+                    <td>${r.type}</td>
+                    <td><span class="status-badge ${r.status==='APPROVED'?'status-confirmed':r.status==='PENDING'?'status-pending':'status-cancelled'}">${r.status}</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn btn-warning" onclick="approve(${idx})"><i class="fas fa-check"></i></button>
+                            <button class="action-btn btn-danger" onclick="reject(${idx})"><i class="fas fa-xmark"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadLeaveFromBackend(){
+            try {
+                const res = await fetch('/api/hr/leave');
+                const data = await res.json();
+                // Normalize to render structure used by UI
+                leave = (data || []).map(d => {
+                    const name = (d.employee && d.employee.name) ? d.employee.name : (d.name || '');
+                    const s = d.startDate || '';
+                    const e = d.endDate || '';
+                    const range = e && e !== s ? `${s} → ${e}` : s;
+                    return { id: d.id, name, range, type: d.type, status: (d.status || 'PENDING') };
+                });
+            } catch (e) { console.error('Failed to load leave', e); leave = []; }
+        }
+        function saveLeave(){ /* no-op: backend persists */ }
+        function loadLeave(){ return leave; }
+        async function approve(idx){
+            const item = leave[idx]; if (!item || !item.id) return;
+            try { const r = await fetch(`/api/hr/leave/${item.id}/approve`, { method:'POST' }); if (!r.ok) throw new Error('approve failed'); } catch(e){ alert('Approve failed'); return; }
+            await loadLeaveFromBackend(); renderLeave();
+        }
+        async function reject(idx){
+            const item = leave[idx]; if (!item || !item.id) return;
+            try { const r = await fetch(`/api/hr/leave/${item.id}/reject`, { method:'POST' }); if (!r.ok) throw new Error('reject failed'); } catch(e){ alert('Reject failed'); return; }
+            await loadLeaveFromBackend(); renderLeave();
+        }
+
+        function openLeaveModal(){
+            const sel = document.getElementById('lvName');
+            sel.innerHTML = employees.map(n=>`<option value="${n}">${n}</option>`).join('');
+            document.getElementById('leaveForm').reset();
+            document.getElementById('leaveModal').style.display='block';
+            // Keep end date not earlier than start date on UI
+            const startEl = document.getElementById('lvStart');
+            const endEl = document.getElementById('lvEnd');
+            if (startEl && endEl){
+                endEl.min = startEl.value || '';
+                const sync = () => {
+                    endEl.min = startEl.value || '';
+                    // Clear previous custom validity
+                    endEl.setCustomValidity('');
+                    if (endEl.value && startEl.value && endEl.value < startEl.value){
+                        endEl.setCustomValidity('End date cannot be before start date');
+                    }
+                };
+                startEl.addEventListener('change', sync);
+                endEl.addEventListener('change', sync);
+                sync();
+            }
+        }
+        function closeLeaveModal(){ document.getElementById('leaveModal').style.display='none'; }
+
+        // ====== Attendance stubs (avoid runtime errors if not provided elsewhere) ======
+
+		function loadAttendance(){
+			try { return JSON.parse(localStorage.getItem('tgms_attendance') || '{}'); } catch (e) { return {}; }
+		}
+		function renderAttendance(){ /* no-op stub; implement elsewhere if needed */ }
+		function markAllPresent(){
+            // UI feedback badge
+            const badge = document.getElementById('savedBadge');
+            if (badge) { badge.style.display = 'inline-block'; setTimeout(()=>{ badge.style.display = 'none'; }, 1200); }
+
+            // Update local storage for today
+            const map = loadAttendance();
+            const tKey = new Date().toISOString().slice(0,10);
+            const time = new Date();
+            const hh = String(time.getHours()).padStart(2,'0');
+            const mm = String(time.getMinutes()).padStart(2,'0');
+            const nowStr = `${hh}:${mm}`;
+            employees.forEach(n => { map[n] = { status: 'Present', time: nowStr }; });
+            try { localStorage.setItem('tgms_attendance', JSON.stringify(map)); } catch (e) {}
+
+            // Persist to backend for each employee (fire-and-forget)
+            employees.forEach(name => { persistAttendanceByName(name, 'Present', tKey).catch(console.error); });
+        }
+
+        async function loadEmployeesFromBackend(){
+            try {
+                const res = await fetch('/api/hr/employees');
+                const data = await res.json();
+                employees = (data || []).map(e => e.name);
+                EMP_INDEX = Object.fromEntries((data || []).map(e => [e.name, e.id]));
+            } catch (e) { console.error('Failed to load employees', e); }
+        }
+        
+        async function persistAttendanceByName(name, status, date){
+            const empId = EMP_INDEX[name];
+            if (!empId) return;
+            const params = new URLSearchParams({ empId: String(empId), status: status || 'Present' });
+            if (date) params.set('date', date);
+            try { await fetch(`/api/hr/attendance/mark?${params.toString()}`, { method: 'POST' }); }
+            catch (e) { console.error('Persist attendance failed', e); }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // load employees first (needed for persistence and modal options)
+            await loadEmployeesFromBackend();
+
+            // init data and render
+            await loadLeaveFromBackend();
+            renderAttendance();
+            renderLeave();
+
+            // leave form submit handler
+            const form = document.getElementById('leaveForm');
+            if (form) {
+                form.addEventListener('submit', async (e)=>{
+                    e.preventDefault();
+                    const nameEl = document.getElementById('lvName');
+                    const startEl = document.getElementById('lvStart');
+                    const endEl = document.getElementById('lvEnd');
+                    const typeEl = document.getElementById('lvType');
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const name = nameEl ? nameEl.value : '';
+                    const empId = EMP_INDEX[name];
+                    const s = startEl ? startEl.value : '';
+                    const eDate = endEl ? endEl.value : '';
+                    const type = typeEl ? typeEl.value : '';
+                    // Client-side validation: start required, end >= start if provided
+                    endEl.setCustomValidity('');
+                    if (!s){
+                        startEl.reportValidity();
+                        return;
+                    }
+                    if (eDate && eDate < s){
+                        endEl.setCustomValidity('End date cannot be before start date');
+                        endEl.reportValidity();
+                        return;
+                    }
+                    // Final HTML5 validation check
+                    if (!form.checkValidity()) { form.reportValidity(); return; }
+                    const params = new URLSearchParams({ empId: String(empId||'') , start: s, type });
+                    if (eDate) params.set('end', eDate);
+                    try {
+                        if (submitBtn) { submitBtn.disabled = true; }
+                        const r = await fetch(`/api/hr/leave?${params.toString()}`, { method: 'POST' });
+                        if (!r.ok) {
+                            const msg = await r.text();
+                            throw new Error(msg || 'Failed to submit leave');
+                        }
+                    } catch (err) { alert(err.message || 'Failed to submit leave'); return; }
+                    finally { if (submitBtn) { submitBtn.disabled = false; } }
+                    await loadLeaveFromBackend();
+                    renderLeave();
+                    closeLeaveModal();
+                });
+            }
+        });
+			</script>
+
+		</body>
+	</html>

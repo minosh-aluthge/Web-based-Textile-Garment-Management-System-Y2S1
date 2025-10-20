@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TGMS — Quality Controller Management</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <h1><i class="fas fa-clipboard-check"></i> Quality Controller Management</h1>
+        <p>Manage inspection reports and quality outcomes</p>
+        <div class="header-links">
+          <a href="roles.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Roles</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Metrics -->
+    <div class="qc-grid">
+      <div class="qc-card">
+        <div class="qc-title">Inspections Today</div>
+        <div class="metric" id="inspectionsTodayValue">0</div>
+        <div class="qc-score">Across all products</div>
+      </div>
+      <div class="qc-card pass">
+        <div class="qc-title">Pass Rate</div>
+        <div class="metric" id="passRateValue">-</div>
+      </div>
+      <div class="qc-card fail">
+        <div class="qc-title">Defect Rate</div>
+        <div class="metric" id="defectRateValue">-</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <h2><i class="fas fa-list-check"></i> Inspection Reports</h2>
+      <button class="btn btn-primary" onclick="showAddReportModal()"><i class="fas fa-plus"></i> Add Report</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="filter-group">
+        <input id="qcSearch" class="search-input" type="text" placeholder="Search inspection reports..." />
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Report ID</th>
+            <th>Batch</th>
+            <th>Product</th>
+            <th>Inspector</th>
+            <th>Date</th>
+            <th>Result</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="qcBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Add Report Modal -->
+    <div id="addReportModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fas fa-file-circle-plus"></i> Add Inspection Report</h3>
+          <span class="close" onclick="closeAddReportModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="addReportForm">
+            <div class="form-group">
+              <label for="batchId">Batch ID</label>
+              <input type="text" id="batchId" required />
+            </div>
+            <div class="form-group">
+              <label for="product">Product</label>
+              <select id="product" required>
+                <option value="" disabled selected>Select product</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="inspector">Inspector</label>
+              <select id="inspector" required>
+                <option value="" disabled selected>Select inspector</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="inspectionDate">Inspection Date</label>
+              <input type="date" id="inspectionDate" required />
+            </div>
+            <div class="form-group">
+              <label for="result">Result</label>
+              <select id="result" required>
+                <option value="Passed">Passed</option>
+                <option value="Failed">Failed</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="notes">Notes</label>
+              <textarea id="notes" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" onclick="closeAddReportModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Add Report</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Report Modal -->
+    <div id="editReportModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fas fa-pen-to-square"></i> Edit Inspection Report</h3>
+          <span class="close" onclick="closeEditReportModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <form id="editReportForm">
+            <input type="hidden" id="editId" />
+            <div class="form-group">
+              <label for="editBatchId">Batch ID</label>
+              <input type="text" id="editBatchId" required />
+            </div>
+            <div class="form-group">
+              <label for="editProduct">Product</label>
+              <select id="editProduct" required>
+                <option value="" disabled>Select product</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editInspector">Inspector</label>
+              <select id="editInspector" required>
+                <option value="" disabled>Select inspector</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editInspectionDate">Inspection Date</label>
+              <input type="date" id="editInspectionDate" required />
+            </div>
+            <div class="form-group">
+              <label for="editResult">Result</label>
+              <select id="editResult" required>
+                <option value="Passed">Passed</option>
+                <option value="Failed">Failed</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editNotes">Notes</label>
+              <textarea id="editNotes" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" onclick="closeEditReportModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Backend-connected QC UI
+      // Endpoints provided by QualityController at /api/quality/inspections
+
+      // Load products from catalog for dropdowns (SalesOrderController: /api/sales/products)
+      async function loadProducts(){
+        if (window._productsLoaded) return window.products || [];
+        try {
+          const res = await fetch('/api/sales/products');
+          if (!res.ok) throw new Error('Products load failed');
+          const products = await res.json();
+          window.products = Array.isArray(products) ? products : [];
+          window._productsLoaded = true;
+          populateProductSelects();
+          return window.products;
+        } catch(e){ console.error(e); window.products = []; return []; }
+      }
+
+      function populateProductSelects(){
+        const optsFrom = (list) => ['<option value="" disabled>Select product</option>']
+          .concat((list||[]).map(p => `<option value="${(p.name||'').replace(/\"/g,'&quot;')}">${p.name || '-'}${p.category ? ' — ' + p.category : ''}</option>`))
+          .join('');
+        const addSel = document.getElementById('product');
+        if (addSel){ addSel.innerHTML = optsFrom(window.products); addSel.selectedIndex = 0; }
+        const editSel = document.getElementById('editProduct');
+        if (editSel){ editSel.innerHTML = optsFrom(window.products); }
+      }
+
+      // Load inspectors from HR employees for dropdowns (/api/hr/employees)
+      async function loadInspectors(){
+        if (window._inspectorsLoaded) return window.inspectors || [];
+        try {
+          const res = await fetch('/api/hr/employees');
+          if (!res.ok) throw new Error('Employees load failed');
+          const employees = await res.json();
+          window.inspectors = Array.isArray(employees) ? employees.filter(e => e && e.name) : [];
+          window._inspectorsLoaded = true;
+          populateInspectorSelects();
+          return window.inspectors;
+        } catch(e){ console.error(e); window.inspectors = []; return []; }
+      }
+
+      function populateInspectorSelects(){
+        const optsFrom = (list) => ['<option value="" disabled>Select inspector</option>']
+          .concat((list||[]).map(emp => {
+            const name = (emp.name||'').replace(/\"/g,'&quot;');
+            const extras = [emp.department, emp.role].filter(Boolean).join(' — ');
+            return `<option value="${name}">${emp.name || '-'}${extras ? ' — ' + extras : ''}</option>`;
+          })).join('');
+        const addSel = document.getElementById('inspector');
+        if (addSel){ addSel.innerHTML = optsFrom(window.inspectors); addSel.selectedIndex = 0; }
+        const editSel = document.getElementById('editInspector');
+        if (editSel){ editSel.innerHTML = optsFrom(window.inspectors); }
+      }
+
+      function badgeClass(result){
+        if (result === 'Passed') return 'status-confirmed';
+        if (result === 'Failed') return 'status-cancelled';
+        return 'status-pending';
+      }
+
+      async function loadReports(){
+        const body = document.getElementById('qcBody');
+        if (!body) return;
+        try {
+          const res = await fetch('/api/quality/inspections');
+          if (!res.ok) throw new Error('Load failed');
+          const data = await res.json();
+          window.qcList = Array.isArray(data) ? data : [];
+          // Compute metrics on full list
+          updateMetrics(window.qcList);
+          // Apply search filter
+          const q = (document.getElementById('qcSearch')?.value || '').trim().toLowerCase();
+          const view = q ? window.qcList.filter(r => {
+            const s = [r.reportId, r.batchId, r.product, r.inspector, r.result, r.notes]
+              .map(x => (x || '').toString().toLowerCase()).join(' ');
+            return s.includes(q);
+          }) : window.qcList;
+          body.innerHTML = (view || []).map(r => {
+            const dateText = (r.inspectionDate || '').toString().substring(0,10);
+            return `
+              <tr data-id="${r.id}">
+                <td>${r.reportId || '-'}</td>
+                <td>${r.batchId || '-'}</td>
+                <td>${r.product || '-'}</td>
+                <td>${r.inspector || '-'}</td>
+                <td>${dateText}</td>
+                <td><span class="status-badge ${badgeClass(r.result)}">${r.result || '-'}</span></td>
+                <td>
+                  <div class="action-buttons">
+                    <button class="action-btn btn-warning" onclick="showEditReportModal(${r.id})"><i class="fas fa-pen"></i></button>
+                    <button class="action-btn btn-danger" onclick="deleteReport(${r.id})"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>`;
+          }).join('');
+        } catch (e) {
+          console.error(e);
+          body.innerHTML = '<tr><td colspan="7" class="text-center">Failed to load</td></tr>';
+        }
+
+        
+      }
+
+      function updateMetrics(list){
+        const total = Array.isArray(list) ? list.length : 0;
+        const today = new Date().toISOString().substring(0,10);
+        let pass = 0, fail = 0, todayCount = 0;
+        let sumScore = 0, cntScore = 0;
+        (list || []).forEach(r => {
+          if ((r.inspectionDate || '').toString().substring(0,10) === today) todayCount++;
+          if ((r.result || '').toString().toLowerCase() === 'passed') pass++;
+          if ((r.result || '').toString().toLowerCase() === 'failed') fail++;
+          if (r.qualityScore != null && !isNaN(Number(r.qualityScore))) { sumScore += Number(r.qualityScore); cntScore++; }
+        });
+        const passRate = total ? (pass / total * 100) : 0;
+        const defectRate = total ? (fail / total * 100) : 0;
+        const overall = cntScore ? (sumScore / cntScore) : null;
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        set('inspectionsTodayValue', String(todayCount));
+        set('passRateValue', total ? `${passRate.toFixed(1)}%` : '-');
+        set('defectRateValue', total ? `${defectRate.toFixed(1)}%` : '-');
+        set('overallScoreValue', overall != null ? `${Number(overall).toFixed(1)}%` : '-');
+      }
+
+      function showAddReportModal(){
+        const form = document.getElementById('addReportForm');
+        if (form) form.reset();
+        const modal = document.getElementById('addReportModal');
+        if (modal) modal.style.display = 'block';
+        // Ensure product options are present
+        loadProducts().then(() => populateProductSelects());
+        // Ensure inspector options are present
+        loadInspectors().then(() => populateInspectorSelects());
+      }
+      function closeAddReportModal(){
+        const modal = document.getElementById('addReportModal');
+        if (modal) modal.style.display = 'none';
+      }
+
+      async function showEditReportModal(id){
+        try {
+          // Ensure products are loaded before opening
+          await loadProducts();
+          // Ensure inspectors are loaded before opening
+          await loadInspectors();
+          const res = await fetch(`/api/quality/inspections/${id}`);
+          if (!res.ok) throw new Error('Load one failed');
+          const r = await res.json();
+          document.getElementById('editId').value = r.id;
+          document.getElementById('editBatchId').value = r.batchId || '';
+          populateProductSelects();
+          const ep = document.getElementById('editProduct');
+          if (ep){
+            ep.value = r.product || '';
+            if (!ep.value){ // if name not found, add as custom option to preserve data
+              const opt = document.createElement('option');
+              opt.value = r.product || '';
+              opt.textContent = r.product || '';
+              if (opt.value){ ep.appendChild(opt); ep.value = opt.value; }
+            }
+          }
+          populateInspectorSelects();
+          const ei = document.getElementById('editInspector');
+          if (ei){
+            ei.value = r.inspector || '';
+            if (!ei.value){
+              const opt = document.createElement('option');
+              opt.value = r.inspector || '';
+              opt.textContent = r.inspector || '';
+              if (opt.value){ ei.appendChild(opt); ei.value = opt.value; }
+            }
+          }
+          document.getElementById('editInspectionDate').value = (r.inspectionDate || '').toString().substring(0,10);
+          document.getElementById('editResult').value = r.result || 'Pending';
+          document.getElementById('editNotes').value = r.notes || '';
+          const modal = document.getElementById('editReportModal');
+          if (modal) modal.style.display = 'block';
+        } catch (e) { console.error(e); alert('Failed to load report'); }
+      }
+      function closeEditReportModal(){
+        const modal = document.getElementById('editReportModal');
+        if (modal) modal.style.display = 'none';
+      }
+
+      async function deleteReport(id){
+        if (!confirm('Delete this inspection report?')) return;
+        try {
+          const res = await fetch(`/api/quality/inspections/${id}`, { method: 'DELETE' });
+          if (!res.ok && res.status !== 204) throw new Error('Delete failed');
+          await loadReports();
+        } catch (e) { console.error(e); alert('Failed to delete'); }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        loadReports();
+        loadProducts();
+        loadInspectors();
+
+        // Live search
+        const search = document.getElementById('qcSearch');
+        if (search){
+          search.addEventListener('input', () => loadReports());
+        }
+
+        const addForm = document.getElementById('addReportForm');
+        if (addForm){
+          addForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+              reportId: `QR-${new Date().getFullYear()}-${Math.floor(100 + Math.random()*900)}`,
+              batchId: document.getElementById('batchId').value.trim(),
+              product: document.getElementById('product').value.trim(),
+              inspector: document.getElementById('inspector').value.trim(),
+              inspectionDate: document.getElementById('inspectionDate').value,
+              result: document.getElementById('result').value,
+              notes: document.getElementById('notes').value.trim(),
+            };
+            const fd = new FormData();
+            fd.append('data', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+            try {
+              const res = await fetch('/api/quality/inspections', { method: 'POST', body: fd });
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              closeAddReportModal();
+              await loadReports();
+            } catch (e2) { console.error(e2); alert('Failed to create'); }
+          });
+        }
+
+        const editForm = document.getElementById('editReportForm');
+        if (editForm){
+          editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const payload = {
+              reportId: (document.getElementById('editId').value && undefined), // keep existing on backend if ignored
+              batchId: document.getElementById('editBatchId').value.trim(),
+              product: document.getElementById('editProduct').value.trim(),
+              inspector: document.getElementById('editInspector').value.trim(),
+              inspectionDate: document.getElementById('editInspectionDate').value,
+              result: document.getElementById('editResult').value,
+              notes: document.getElementById('editNotes').value.trim(),
+            };
+            const fd = new FormData();
+            fd.append('data', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+            try {
+              const res = await fetch(`/api/quality/inspections/${id}`, { method: 'PUT', body: fd });
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              closeEditReportModal();
+              await loadReports();
+            } catch (e2) { console.error(e2); alert('Failed to update'); }
+          });
+        }
+      });
+    </script>
+  </div>
+</body>
+</html>

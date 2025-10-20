@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Production Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    :root{--bg:#f5f7fb;--border:#e9ecef;--primary:#2563eb;--green:#16a34a;--done:#22c55e;--muted:#6c757d}
+    body{background:var(--bg)}
+    .hero{background:linear-gradient(120deg,#6d28d9,#2563eb);color:#fff;border-radius:16px;padding:28px;margin:20px auto}
+    .section{background:#fff;border-radius:12px;padding:20px;box-shadow:0 6px 24px rgba(0,0,0,.06);margin:20px 0}
+    .order-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+    .order-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-weight:600}
+    .timeline{display:flex;gap:10px;flex-wrap:wrap}
+    .stage{padding:10px 16px;border-radius:8px;background:#edf1f7;color:#244;font-weight:600;cursor:pointer;border:1px solid var(--border);user-select:none;min-height:38px;display:inline-flex;align-items:center}
+    .stage.done{background:var(--done);color:#fff;border-color:var(--done)}
+    .stage.current{background:var(--green);color:#fff;border-color:var(--green)}
+    .order-actions{display:flex;gap:8px}
+    .details-panel{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px}
+    .details-panel small{color:var(--muted)}
+    .history-list{margin:6px 0 0 0;padding-left:18px}
+    .history-list li{margin-bottom:4px}
+    .inline-editor{background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px}
+    .inline-editor .form-label{margin-bottom:4px}
+    .quick-edit{background:#fff;border:1px dashed var(--border);border-radius:10px;padding:10px;margin-top:10px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .filters .form-select,.filters .form-control{min-width:160px}
+    .stage-wrap{display:flex;flex-direction:column;align-items:flex-start}
+    .stage-info{margin-top:4px;color:#6c757d;font-size:12px}
+    .badge-muted{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <h2 class="fw-bold mb-1">Production Management</h2>
+          <div class="opacity-75">Track order status across departments</div>
+        </div>
+        <div class="toolbar">
+          <a class="btn btn-light btn-sm" href="dashboard.html">Dashboard</a>
+          <a class="btn btn-primary btn-sm" href="production-products.html">Create Clothing Item</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="d-flex align-items-center mb-3">
+        <h5 class="mb-0 me-auto">Order Timeline</h5>
+      </div>
+      <div id="filters" class="filters">
+        <input id="fSearch" class="form-control form-control-sm" placeholder="Search subject..." />
+        <select id="fStatus" class="form-select form-select-sm">
+          <option value="">All Status</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="NOW_CUTTING">Now Cutting</option>
+          <option value="NOW_SEWING">Now Sewing</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="ON_HOLD">On Hold</option>
+          <option value="DELAYED">Delayed</option>
+          <option value="SHIPPED">Shipped</option>
+        </select>
+        <select id="fStage" class="form-select form-select-sm">
+          <option value="">All Stages</option>
+        </select>
+        <select id="fCustomer" class="form-select form-select-sm">
+          <option value="">All Customers</option>
+        </select>
+        <button id="fClear" class="btn btn-light btn-sm">Clear</button>
+      </div>
+      <div id="orders"></div>
+    </div>
+  </div>
+
+  <!-- Stage Details Modal -->
+  <div class="modal fade" id="stageDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Update Stage Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="detailsForm">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Stage</label>
+                <input type="text" class="form-control" id="detailsStage" readonly />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Product Status</label>
+                <select class="form-select" id="detailsProductStatus"></select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Operator</label>
+                <input type="text" class="form-control" id="detailsOperator" placeholder="e.g., S. Perera" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Pieces Started</label>
+                <input type="number" min="0" class="form-control" id="detailsStarted" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Pieces Completed</label>
+                <input type="number" min="0" class="form-control" id="detailsCompleted" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Custom Label (optional)</label>
+                <input type="text" class="form-control" id="detailsCustomLabel" placeholder="Rework / Urgent QC" />
+              </div>
+              <div class="col-12">
+                <label class="form-label">Note</label>
+                <textarea class="form-control" id="detailsNote" rows="2" placeholder="Any remarks..."></textarea>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" id="detailsSaveBtn" class="btn btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Configure your API base here (use '' for same-origin)
+    const API_BASE = window.API_BASE || 'http://localhost:8080';
+    const API_PREFIX = '/api/sales';
+    // Stages config
+    const STAGES = ["Created","Cutting","Sewing","Washing","QC","Packing","Shipped"];
+
+    // ---- Status helpers (contextual to stage) ----
+    function statusOptionsForStage(stageName){
+      const base = [
+        {v:'IN_PROGRESS', l:'In Progress'},
+        {v:'COMPLETED', l:'Completed'},
+        {v:'ON_HOLD', l:'On Hold'},
+        {v:'DELAYED', l:'Delayed'},
+        {v:'SHIPPED', l:'Shipped'}
+      ];
+      const list = [...base];
+      if(stageName === 'Cutting') list.unshift({v:'NOW_CUTTING', l:'Now Cutting'});
+      if(stageName === 'Sewing') list.unshift({v:'NOW_SEWING', l:'Now Sewing'});
+      return list;
+    }
+    function defaultStatusForStage(stageName){
+      if(stageName === 'Cutting') return 'NOW_CUTTING';
+      if(stageName === 'Sewing') return 'NOW_SEWING';
+      if(stageName === 'Shipped') return 'SHIPPED';
+      return 'IN_PROGRESS';
+    }
+    function populateStatusSelect(selectEl, stageName, currentValue){
+      const opts = statusOptionsForStage(stageName)
+        .map(o=>`<option value="${o.v}">${o.l}</option>`)
+        .join('');
+      selectEl.innerHTML = opts;
+      const desired = currentValue || defaultStatusForStage(stageName);
+      const exists = Array.from(selectEl.options).some(op=>op.value === desired);
+      selectEl.value = exists ? desired : 'IN_PROGRESS';
+    }
+
+    // Orders will be loaded from backend
+    let orders = [];
+    let filters = { search:'', status:'', stage:'', customer:'' };
+
+    const ordersEl = document.getElementById('orders');
+    let activeOrderIdx = null; // index in orders
+
+    function labelFor(order, idx){
+      if(idx === order.currentIndex && order.customLabel && order.customLabel.trim()) return order.customLabel.trim();
+      return STAGES[idx];
+    }
+
+    // ---------- Inline Editor ----------
+    let activeInline = { orderIdx: null, stageIdx: null };
+
+    function openInlineEditor(orderIdx, stageIdx, cardEl, timelineEl){
+      activeInline = { orderIdx, stageIdx };
+      // remove existing editor in this card if any
+      const exist = cardEl.querySelector('.inline-editor');
+      if (exist) exist.remove();
+
+      const order = orders[orderIdx];
+      const stageName = STAGES[stageIdx];
+      const sh = order.history && order.history[stageName] ? order.history[stageName] : [];
+      const latest = sh.length > 0 ? sh[sh.length-1] : {};
+
+      const ed = document.createElement('div');
+      ed.className = 'inline-editor';
+      ed.innerHTML = `
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label">Product Status</label>
+            <select class="form-select form-select-sm js-status"></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Operator</label>
+            <input class="form-control form-control-sm js-operator" placeholder="e.g., S. Perera"/>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Started</label>
+            <input type="number" min="0" class="form-control form-control-sm js-started" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Completed</label>
+            <input type="number" min="0" class="form-control form-control-sm js-completed" />
+          </div>
+          <div class="col-md-12">
+            <label class="form-label">Note</label>
+            <input class="form-control form-control-sm js-note" placeholder="Any remarks..."/>
+          </div>
+          <!-- Stage-specific fields -->
+          <div class="col-12 js-stage-specific"></div>
+          <div class="col-12 d-flex gap-2 justify-content-end mt-2">
+            <button class="btn btn-light btn-sm js-cancel">Cancel</button>
+            <button class="btn btn-primary btn-sm js-save">Save</button>
+          </div>
+        </div>`;
+
+      // Prefill (contextual options)
+      populateStatusSelect(ed.querySelector('.js-status'), stageName, latest.productStatus);
+      ed.querySelector('.js-operator').value = latest.operator || '';
+      ed.querySelector('.js-started').value = Number.isFinite(latest.piecesStarted) ? latest.piecesStarted : '';
+      ed.querySelector('.js-completed').value = Number.isFinite(latest.piecesCompleted) ? latest.piecesCompleted : '';
+      ed.querySelector('.js-note').value = latest.note || '';
+
+      // Stage-specific UI
+      const spec = ed.querySelector('.js-stage-specific');
+      if (stageName === 'Cutting') {
+        spec.innerHTML = `
+          <div class="row g-2">
+            <div class="col-md-3"><label class="form-label">Machine</label><input class="form-control form-control-sm js-machine"/></div>
+            <div class="col-md-3"><label class="form-label">Fabric Roll</label><input class="form-control form-control-sm js-roll"/></div>
+          </div>`;
+        spec.querySelector('.js-machine').value = latest.machine || '';
+        spec.querySelector('.js-roll').value = latest.roll || '';
+      } else if (stageName === 'Sewing') {
+        spec.innerHTML = `
+          <div class="row g-2">
+            <div class="col-md-3"><label class="form-label">Line</label><input class="form-control form-control-sm js-line"/></div>
+            <div class="col-md-3"><label class="form-label">Operators</label><input type="number" min="0" class="form-control form-control-sm js-operators"/></div>
+          </div>`;
+        spec.querySelector('.js-line').value = latest.sewingLine || '';
+        spec.querySelector('.js-operators').value = Number.isFinite(latest.operatorCount) ? latest.operatorCount : '';
+      } else if (stageName === 'Washing') {
+        spec.innerHTML = `
+          <div class="row g-2">
+            <div class="col-md-4"><label class="form-label">Recipe</label><input class="form-control form-control-sm js-recipe"/></div>
+          </div>`;
+        spec.querySelector('.js-recipe').value = latest.washingRecipe || '';
+      } else if (stageName === 'QC') {
+        spec.innerHTML = `
+          <div class="row g-2">
+            <div class="col-md-4"><label class="form-label">Defects</label><input class="form-control form-control-sm js-defects" placeholder="comma-separated"/></div>
+          </div>`;
+        spec.querySelector('.js-defects').value = Array.isArray(latest.qcDefects) ? latest.qcDefects.join(', ') : (latest.qcDefects || '');
+      } else {
+        spec.innerHTML = '';
+      }
+
+      // Bind actions
+      ed.querySelector('.js-cancel').addEventListener('click', ()=> { ed.remove(); activeInline = { orderIdx:null, stageIdx:null }; });
+      ed.querySelector('.js-save').addEventListener('click', async ()=>{
+        const details = {
+          productStatus: ed.querySelector('.js-status').value,
+          operator: ed.querySelector('.js-operator').value || null,
+          piecesStarted: parseInt(ed.querySelector('.js-started').value || '0',10),
+          piecesCompleted: parseInt(ed.querySelector('.js-completed').value || '0',10),
+          note: ed.querySelector('.js-note').value || null,
+          updatedAt: new Date().toISOString()
+        };
+        if (stageName === 'Cutting') {
+          details.machine = ed.querySelector('.js-machine').value || null;
+          details.roll = ed.querySelector('.js-roll').value || null;
+        } else if (stageName === 'Sewing') {
+          details.sewingLine = ed.querySelector('.js-line').value || null;
+          details.operatorCount = parseInt(ed.querySelector('.js-operators').value || '0',10);
+        } else if (stageName === 'Washing') {
+          details.washingRecipe = ed.querySelector('.js-recipe').value || null;
+        } else if (stageName === 'QC') {
+          const d = ed.querySelector('.js-defects').value || '';
+          details.qcDefects = d ? d.split(',').map(x=>x.trim()).filter(Boolean) : null;
+        }
+
+        // Set order stage and call save to backend
+        orders[orderIdx].currentIndex = stageIdx;
+        orders[orderIdx].productStatus = details.productStatus;
+        orders[orderIdx].operator = details.operator || '';
+        orders[orderIdx].piecesStarted = details.piecesStarted || 0;
+        orders[orderIdx].piecesCompleted = details.piecesCompleted || 0;
+        orders[orderIdx].note = details.note || '';
+        await saveOrder(orderIdx);
+        ed.remove();
+      });
+
+      cardEl.appendChild(ed);
+    }
+
+    function openDetails(orderIdx, stageIdx){
+      activeOrderIdx = orderIdx;
+      const order = orders[orderIdx];
+      order.currentIndex = stageIdx; // set selected stage
+      // Prefill modal
+      document.getElementById('detailsStage').value = STAGES[stageIdx];
+      populateStatusSelect(document.getElementById('detailsProductStatus'), STAGES[stageIdx], order.productStatus);
+      document.getElementById('detailsOperator').value = order.operator || '';
+      document.getElementById('detailsStarted').value = order.piecesStarted || '';
+      document.getElementById('detailsCompleted').value = order.piecesCompleted || '';
+      document.getElementById('detailsCustomLabel').value = order.customLabel || '';
+      document.getElementById('detailsNote').value = order.note || '';
+      const modal = new bootstrap.Modal(document.getElementById('stageDetailsModal'));
+      modal.show();
+    }
+
+    function render(){
+      ordersEl.innerHTML = '';
+      // Apply filters
+      const list = orders.filter(o=>{
+        if (filters.search && !(o.name.toLowerCase().includes(filters.search))) return false;
+        if (filters.status){
+          // match latest status on current stage, fallback to order.status if present in API mapping (not in model here)
+          const sName = STAGES[o.currentIndex];
+          const sh = o.history && o.history[sName] ? o.history[sName] : [];
+          const latest = sh.length>0 ? sh[sh.length-1] : null;
+          const cur = latest && latest.productStatus ? latest.productStatus : '';
+          if (cur !== filters.status) return false;
+        }
+        if (filters.stage !== '' && Number.isFinite(parseInt(filters.stage,10))){
+          if (o.currentIndex !== parseInt(filters.stage,10)) return false;
+        }
+        if (filters.customer && o.customer !== filters.customer) return false;
+        return true;
+      });
+      list.forEach((order)=>{
+        const idx = orders.findIndex(x=>x.id===order.id);
+        const card = document.createElement('div');
+        card.className = 'order-card';
+
+        const head = document.createElement('div');
+        head.className = 'order-head';
+        head.innerHTML = `<div>Order #${order.id} — ${order.name}</div><div class="badge-muted">Customer: ${order.customer}</div>`;
+
+        const tl = document.createElement('div');
+        tl.className = 'timeline';
+
+        // stages
+        STAGES.forEach((st, sIdx)=>{
+          const wrap = document.createElement('div');
+          wrap.className = 'stage-wrap';
+          const s = document.createElement('div');
+          s.className = 'stage';
+          if(sIdx < order.currentIndex) s.classList.add('done');
+          if(sIdx === order.currentIndex) s.classList.add('current');
+          s.setAttribute('role','button'); s.tabIndex=0; s.setAttribute('aria-pressed', String(sIdx===order.currentIndex));
+          s.textContent = labelFor(order, sIdx);
+          // small status badge from history
+          const stageName = STAGES[sIdx];
+          const sh = order.history && order.history[stageName] ? order.history[stageName] : [];
+          if (sh.length > 0 && sh[sh.length-1].productStatus) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-secondary ms-2';
+            badge.textContent = sh[sh.length-1].productStatus;
+            s.appendChild(badge);
+          }
+          s.addEventListener('click', ()=> openInlineEditor(idx, sIdx, card, tl));
+          s.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); openInlineEditor(idx, sIdx, card, tl);} });
+          wrap.appendChild(s);
+          // always-visible latest snippet
+          if (sh.length > 0){
+            const latest = sh[sh.length-1];
+            const snippet = [];
+            if (latest.operator) snippet.push(latest.operator);
+            if (Number.isFinite(latest.piecesStarted)) snippet.push('S:'+latest.piecesStarted);
+            if (Number.isFinite(latest.piecesCompleted)) snippet.push('C:'+latest.piecesCompleted);
+            if (latest.note) snippet.push(latest.note);
+            if (snippet.length){
+              const info = document.createElement('div');
+              info.className = 'stage-info';
+              info.textContent = snippet.join(' • ');
+              wrap.appendChild(info);
+            }
+          }
+          tl.appendChild(wrap);
+        });
+
+        // actions
+        const actions = document.createElement('div');
+        actions.className = 'order-actions mt-3';
+        const quickEditBtn = document.createElement('button');
+        quickEditBtn.className = 'btn btn-primary btn-sm';
+        quickEditBtn.textContent = 'Edit';
+        actions.appendChild(quickEditBtn);
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'btn btn-outline-secondary btn-sm';
+        resetBtn.textContent = 'Reset to Created';
+        resetBtn.addEventListener('click', ()=> { orders[idx].currentIndex = 0; orders[idx].customLabel=''; render(); });
+        actions.appendChild(resetBtn);
+
+        // saved details display
+        const details = document.createElement('div');
+        details.className = 'details-panel';
+        // Build history view for the current stage
+        const stageName = STAGES[order.currentIndex];
+        const stageHistory = order.history && order.history[stageName] ? order.history[stageName] : [];
+        if(stageHistory.length > 0){
+          const latest = stageHistory[stageHistory.length - 1];
+          const op = latest.operator ? `<span class=\"me-3\"><strong>Operator:</strong> ${latest.operator}</span>` : '';
+          const ps = Number.isFinite(latest.piecesStarted) ? `<span class=\"me-3\"><strong>Started:</strong> ${latest.piecesStarted}</span>` : '';
+          const pc = Number.isFinite(latest.piecesCompleted) ? `<span class=\"me-3\"><strong>Completed:</strong> ${latest.piecesCompleted}</span>` : '';
+          const st = latest.productStatus ? `<span class=\"badge bg-secondary ms-2\">${latest.productStatus}</span>` : '';
+          const note = latest.note ? `<div class=\"mt-1\"><small>${latest.note}</small></div>` : '';
+          const when = latest.updatedAt ? `<div class=\"mt-1\"><small>Updated: ${new Date(latest.updatedAt).toLocaleString()}</small></div>` : '';
+          let historyItems = '';
+          stageHistory.forEach((h, i)=>{
+            const t = h.updatedAt ? new Date(h.updatedAt).toLocaleString() : '';
+            const hs = h.productStatus ? ` • Status:${h.productStatus}` : '';
+            historyItems += `<li><small>${t}</small> — ${h.operator || ''} ${Number.isFinite(h.piecesStarted)?' • Start:'+h.piecesStarted:''} ${Number.isFinite(h.piecesCompleted)?' • Done:'+h.piecesCompleted:''}${hs} ${h.note? ' • '+h.note: ''}</li>`;
+          });
+          details.innerHTML = `<div><strong>${stageName}</strong> latest ${st}</div><div class=\"mt-1\">${op}${ps}${pc}</div>${note}${when}<div class=\"mt-2\"><strong>History</strong><ul class=\"history-list\">${historyItems}</ul></div>`;
+        } else {
+          details.innerHTML = `<div><strong>${stageName}</strong> — no history yet</div>`;
+        }
+
+        // quick edit panel (hidden by default)
+        const q = document.createElement('div');
+        q.className = 'quick-edit d-none';
+        q.innerHTML = `
+          <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label mb-1">Stage</label>
+              <select class="form-select form-select-sm js-q-stage"></select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label mb-1">Product Status</label>
+              <select class="form-select form-select-sm js-q-status"></select>
+            </div>
+            <div class="col-md-4 text-end">
+              <button class="btn btn-light btn-sm js-q-cancel">Cancel</button>
+              <button class="btn btn-success btn-sm js-q-save">Save</button>
+            </div>
+          </div>`;
+
+        const qStage = q.querySelector('.js-q-stage');
+        STAGES.forEach((name, i)=>{
+          const opt = document.createElement('option');
+          opt.value = String(i); opt.textContent = name;
+          if (i === order.currentIndex) opt.selected = true;
+          qStage.appendChild(opt);
+        });
+        const qStatus = q.querySelector('.js-q-status');
+        // init with latest status of current stage
+        const curStageName = STAGES[order.currentIndex];
+        const curHist = order.history && order.history[curStageName] ? order.history[curStageName] : [];
+        const existing = (curHist.length>0 && curHist[curHist.length-1].productStatus) ? curHist[curHist.length-1].productStatus : null;
+        populateStatusSelect(qStatus, curStageName, existing);
+        // when stage changes in quick edit, repopulate the status options
+        qStage.addEventListener('change', ()=>{
+          const newStageName = STAGES[parseInt(qStage.value,10)];
+          populateStatusSelect(qStatus, newStageName, null);
+        });
+
+        quickEditBtn.addEventListener('click', ()=>{ q.classList.toggle('d-none'); });
+        q.querySelector('.js-q-cancel').addEventListener('click', ()=> q.classList.add('d-none'));
+        q.querySelector('.js-q-save').addEventListener('click', async ()=>{
+          orders[idx].currentIndex = parseInt(qStage.value,10);
+          orders[idx].productStatus = qStatus.value;
+          // minimal details only productStatus to save
+          orders[idx].operator = '';
+          orders[idx].piecesStarted = null;
+          orders[idx].piecesCompleted = null;
+          orders[idx].note = '';
+          await saveOrder(idx);
+          q.classList.add('d-none');
+        });
+
+        card.appendChild(head); card.appendChild(tl); card.appendChild(actions); card.appendChild(q); card.appendChild(details);
+        ordersEl.appendChild(card);
+      });
+    }
+
+    async function fetchOrders(){
+      ordersEl.innerHTML = '<div class="text-center text-muted py-4">Loading orders...</div>';
+      try{
+        const res = await fetch(`${API_BASE}${API_PREFIX}/orders`);
+        if(!res.ok){ throw new Error(await res.text() || 'Failed to load orders'); }
+        const data = await res.json();
+        // Map API -> UI model
+        orders = (data || []).map(o => {
+          const idx = Number.isInteger(o.productionStageIndex) ? o.productionStageIndex : 0;
+          const subject = o.subject && o.subject.trim() ? o.subject : `Order #${o.id}`;
+          const custName = o.customer && o.customer.name ? o.customer.name : 'N/A';
+          const label = (o.productionStage && STAGES[idx] !== o.productionStage) ? o.productionStage : '';
+          let parsedHistory = null;
+          if (o.productionStageDetails) {
+            try { parsedHistory = JSON.parse(o.productionStageDetails); } catch(e) { parsedHistory = null; }
+          }
+          return {
+            id: o.id,
+            name: subject,
+            customer: custName,
+            currentIndex: Math.max(0, Math.min(idx, STAGES.length - 1)),
+            customLabel: label,
+            history: parsedHistory || {}
+          };
+        });
+        // populate stage filter
+        const fStage = document.getElementById('fStage');
+        fStage.innerHTML = '<option value="">All Stages</option>' + STAGES.map((s, i)=>`<option value="${i}">${s}</option>`).join('');
+        // populate customer filter
+        const fCustomer = document.getElementById('fCustomer');
+        const custs = [...new Set(orders.map(o=>o.customer).filter(Boolean))].sort();
+        fCustomer.innerHTML = '<option value="">All Customers</option>' + custs.map(c=>`<option value="${c}">${c}</option>`).join('');
+        bindFilters();
+        render();
+      }catch(err){
+        console.error(err);
+        ordersEl.innerHTML = `<div class="text-center text-danger py-4">${err.message}</div>`;
+      }
+    }
+
+    function bindFilters(){
+      const fSearch = document.getElementById('fSearch');
+      const fStatus = document.getElementById('fStatus');
+      const fStage = document.getElementById('fStage');
+      const fCustomer = document.getElementById('fCustomer');
+      const fClear = document.getElementById('fClear');
+      const onChange = ()=>{
+        filters.search = fSearch.value.trim().toLowerCase();
+        filters.status = fStatus.value;
+        filters.stage = fStage.value;
+        filters.customer = fCustomer.value;
+        render();
+      };
+      [fSearch,fStatus,fStage,fCustomer].forEach(el=> el.addEventListener('input', onChange));
+      fClear.addEventListener('click', ()=>{
+        fSearch.value=''; fStatus.value=''; fStage.value=''; fCustomer.value='';
+        filters = { search:'', status:'', stage:'', customer:'' };
+        render();
+      });
+    }
+
+    async function saveOrder(idx){
+      const order = orders[idx];
+      const stage = labelFor(order, order.currentIndex);
+      const payload = {
+        stage,
+        index: order.currentIndex,
+        details: {
+          productStatus: order.productStatus || null,
+          operator: order.operator || null,
+          piecesStarted: order.piecesStarted || null,
+          piecesCompleted: order.piecesCompleted || null,
+          note: order.note || null,
+          updatedAt: new Date().toISOString()
+        }
+      };
+      try{
+        const res = await fetch(`${API_BASE}${API_PREFIX}/orders/${order.id}/stage`, {
+          method: 'PUT', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload)
+        });
+        if(!res.ok){ throw new Error(await res.text() || 'Failed to save'); }
+        const updated = await res.json();
+        // reflect saved details in UI history (append)
+        const sName = STAGES[order.currentIndex];
+        if(!order.history) order.history = {};
+        if(!order.history[sName]) order.history[sName] = [];
+        order.history[sName].push(payload.details);
+        console.log('Saved', updated);
+        alert(`Order #${order.id} updated to ${stage}`);
+        render();
+      }catch(err){
+        console.error(err); alert('Error saving: ' + err.message);
+      }
+    }
+
+    // Modal Save
+    document.getElementById('detailsSaveBtn').addEventListener('click', async ()=>{
+      if(activeOrderIdx==null) return;
+      const order = orders[activeOrderIdx];
+      order.productStatus = document.getElementById('detailsProductStatus').value;
+      order.operator = document.getElementById('detailsOperator').value;
+      order.piecesStarted = parseInt(document.getElementById('detailsStarted').value || '0',10);
+      order.piecesCompleted = parseInt(document.getElementById('detailsCompleted').value || '0',10);
+      order.customLabel = document.getElementById('detailsCustomLabel').value;
+      order.note = document.getElementById('detailsNote').value;
+      await saveOrder(activeOrderIdx); // autosave directly to backend
+      bootstrap.Modal.getInstance(document.getElementById('stageDetailsModal')).hide();
+    });
+
+    // Load from backend on page load
+    fetchOrders();
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>TGMS — Production Dashboard</title>
+	<link rel="stylesheet" href="css/style.css">
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+	<div class="container">
+		<header class="header">
+			<div class="header-content">
+				<h1><i class="fas fa-gauge-high"></i> Production Manager Dashboard</h1>
+				<p>Overview of orders, progress and output</p>
+				<div class="header-links">
+					<a href="roles.html" class="btn btn-secondary"><i class="fas fa-house"></i> Back to Roles</a>
+					<a href="production.html" class="btn btn-primary"><i class="fas fa-sitemap"></i> Production</a>
+				</div>
+			</div>
+		</header>
+
+		<div class="reports-grid">
+			<div class="report-card">
+				<h3>Active Orders</h3>
+				<div class="metric" id="metricActive">0</div>
+			</div>
+			<div class="report-card">
+				<h3>Dept. Progress</h3>
+				<div class="metric" id="metricProgress">0%</div>
+			</div>
+			<div class="report-card">
+				<h3>Daily Output</h3>
+				<div class="metric" id="metricOutput">0</div>
+			</div>
+			<div class="report-card">
+				<h3>Late Orders</h3>
+				<div class="metric" id="metricLate">0</div>
+			</div>
+		</div>
+
+		<div class="charts-grid">
+			<div class="chart-card">
+				<div class="chart-header"><i class="fas fa-chart-line"></i> Daily Output</div>
+				<canvas id="outputChart" height="120"></canvas>
+			</div>
+			<div class="chart-card">
+				<div class="chart-header"><i class="fas fa-diagram-project"></i> Progress by Department</div>
+				<canvas id="deptChart" height="120"></canvas>
+			</div>
+		</div>
+	</div>
+
+	<script>
+	(async function init() {
+		try {
+			const [ordersRes] = await Promise.all([
+				fetch('/api/sales/orders')
+			]);
+			const orders = ordersRes.ok ? await ordersRes.json() : [];
+			document.getElementById('metricActive').textContent = orders.length;
+			const late = orders.filter(o => o.deliveryDate && new Date(o.deliveryDate) < new Date()).length;
+			document.getElementById('metricLate').textContent = late;
+
+			// Fake aggregates for demo look
+			document.getElementById('metricProgress').textContent = '72%';
+			document.getElementById('metricOutput').textContent = '1,280';
+
+			new Chart(document.getElementById('outputChart'), {
+				type: 'line',
+				data: {
+					labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+					datasets: [{
+						label: 'Units',
+						data: [180, 220, 210, 260, 300, 280, 330],
+						borderColor: '#3498db',
+						backgroundColor: 'rgba(52,152,219,0.15)',
+						fill: true,
+						tension: 0.35
+					}]
+				},
+				options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+			});
+
+			new Chart(document.getElementById('deptChart'), {
+				type: 'bar',
+				data: {
+					labels: ['Cutting','Sewing','Washing','QC','Packing'],
+					datasets: [{
+						label: '% Complete',
+						data: [80, 65, 40, 55, 30],
+						backgroundColor: ['#9b59b6','#3498db','#f1c40f','#27ae60','#e67e22']
+					}]
+				},
+				options: { plugins: { legend: { display: false } }, scales: { y: { max: 100, beginAtZero: true } } }
+			});
+		} catch (e) {
+			console.error(e);
+		}
+	})();
+	</script>
+</body>
+</html>
+

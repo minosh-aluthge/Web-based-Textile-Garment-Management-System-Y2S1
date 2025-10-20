@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Production Manager — Product Catalog</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <h1><i class="fas fa-industry"></i> Production Manager — Product Catalog</h1>
+        <p>Manage apparel product master data used in production</p>
+        <div class="header-links" style="margin-top:10px;">
+          <a href="production.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Production</a>
+        </div>
+      </div>
+    </header>
+
+    <div class="tab-content active">
+      <div class="section-header">
+        <h2><i class="fas fa-box"></i> Product Catalog</h2>
+        <button class="btn btn-primary" onclick="pmShowAddProductModal()">
+          <i class="fas fa-plus"></i> Add New Product
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table" id="pmProductsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Price</th>
+              <th>Size Range</th>
+              <th>Fabric</th>
+              <th>Colours</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="pmProductsTableBody">
+            <!-- Products will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div id="pmAddProductModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-plus"></i> Add Product</h3>
+        <span class="close" onclick="pmCloseModal('pmAddProductModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="pmAddProductForm">
+          <div class="form-group"><label>Name</label><input type="text" id="pmNewName" required></div>
+          <div class="form-group"><label>Category</label>
+            <select id="pmNewCategory" required>
+              <option value="">Select Category</option>
+              <option>T-Shirts</option>
+              <option>Dresses</option>
+              <option>Pants</option>
+              <option>Jackets</option>
+              <option>Accessories</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Description</label><textarea id="pmNewDesc" rows="2"></textarea></div>
+          <div class="form-group"><label>Standard Price ($)</label><input type="number" id="pmNewPrice" step="0.01" min="0" required></div>
+          <hr>
+          <div class="form-group"><label>Size Range</label><input type="text" id="pmNewSizeRange" placeholder="XS-XL"></div>
+          <div class="form-group"><label>Fabric Type</label><input type="text" id="pmNewFabric" placeholder="Cotton"></div>
+          <div class="form-group"><label>Colour Options</label><input type="text" id="pmNewColours" placeholder="Red, Blue"></div>
+          <div class="form-group"><label>Care Instructions</label><textarea id="pmNewCare" rows="2" placeholder="Wash cold"></textarea></div>
+          <div class="form-group"><label>Accessories</label><input type="text" id="pmNewAccessories" placeholder="Belt"></div>
+          <div class="form-group"><label>Material</label><input type="text" id="pmNewMaterial" placeholder="100% Cotton"></div>
+          <div class="form-group"><label>Weight</label><input type="number" id="pmNewWeight" step="0.01" min="0" placeholder="0.45"></div>
+          <div class="form-group"><label>Dimensions</label><input type="text" id="pmNewDim" placeholder="LxWxH"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="pmCloseModal('pmAddProductModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Product</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Product Modal -->
+  <div id="pmEditProductModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-edit"></i> Edit Product</h3>
+        <span class="close" onclick="pmCloseModal('pmEditProductModal')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <form id="pmEditProductForm">
+          <input type="hidden" id="pmEditId">
+          <div class="form-group"><label>Name</label><input type="text" id="pmEditName" required></div>
+          <div class="form-group"><label>Category</label>
+            <select id="pmEditCategory" required>
+              <option value="">Select Category</option>
+              <option>T-Shirts</option>
+              <option>Dresses</option>
+              <option>Pants</option>
+              <option>Jackets</option>
+              <option>Accessories</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Description</label><textarea id="pmEditDesc" rows="2"></textarea></div>
+          <div class="form-group"><label>Standard Price ($)</label><input type="number" id="pmEditPrice" step="0.01" min="0" required></div>
+          <hr>
+          <div class="form-group"><label>Size Range</label><input type="text" id="pmEditSizeRange"></div>
+          <div class="form-group"><label>Fabric Type</label><input type="text" id="pmEditFabric"></div>
+          <div class="form-group"><label>Colour Options</label><input type="text" id="pmEditColours"></div>
+          <div class="form-group"><label>Care Instructions</label><textarea id="pmEditCare" rows="2"></textarea></div>
+          <div class="form-group"><label>Accessories</label><input type="text" id="pmEditAccessories"></div>
+          <div class="form-group"><label>Material</label><input type="text" id="pmEditMaterial"></div>
+          <div class="form-group"><label>Weight</label><input type="number" id="pmEditWeight" step="0.01" min="0"></div>
+          <div class="form-group"><label>Dimensions</label><input type="text" id="pmEditDim"></div>
+          <div class="form-group">
+            <label>Timestamps</label>
+            <div>Created At: <span id="pmViewCreated">N/A</span></div>
+            <div>Updated At: <span id="pmViewUpdated">N/A</span></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="pmCloseModal('pmEditProductModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Update Product</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Product Catalog logic
+    let pmProducts = [];
+    const PM_API_BASE = (location.port === '8080') ? '' : 'http://localhost:8080';
+    const pmFetch = (url, opts) => fetch(url.startsWith('http')?url:`${PM_API_BASE}${url}`, opts);
+
+    async function pmLoadProducts() {
+      try {
+        const res = await pmFetch('/api/sales/products');
+        pmProducts = res.ok ? await res.json() : [];
+        const tbody = document.getElementById('pmProductsTableBody');
+        if (pmProducts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center">No products found</td></tr>';
+          return;
+        }
+        tbody.innerHTML = pmProducts.map(p => `
+          <tr>
+            <td>${p.id}</td>
+            <td>${p.name}</td>
+            <td>${p.category}</td>
+            <td>${p.description || 'N/A'}</td>
+            <td>$${parseFloat(p.standardPrice || 0).toFixed(2)}</td>
+            <td>${p.sizeRange || '-'}</td>
+            <td>${p.fabricType || '-'}</td>
+            <td>${p.colorOptions || '-'}</td>
+            <td>
+              <div class="action-buttons">
+                <button class="action-btn btn-warning" title="Edit" onclick="pmEditProduct(${p.id})"><i class="fas fa-edit"></i></button>
+                <button class="action-btn btn-danger" title="Delete" onclick="pmDeleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        console.error('Error loading products', e);
+      }
+    }
+
+    function pmShowAddProductModal() {
+      document.getElementById('pmAddProductForm').reset();
+      document.getElementById('pmAddProductModal').style.display = 'block';
+    }
+
+    function pmCloseModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    document.getElementById('pmAddProductForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('pmNewName').value,
+        category: document.getElementById('pmNewCategory').value,
+        description: document.getElementById('pmNewDesc').value,
+        standardPrice: parseFloat(document.getElementById('pmNewPrice').value || '0'),
+        sizeRange: (document.getElementById('pmNewSizeRange').value||'').trim()||null,
+        fabricType: (document.getElementById('pmNewFabric').value||'').trim()||null,
+        colorOptions: (document.getElementById('pmNewColours').value||'').trim()||null,
+        careInstructions: (document.getElementById('pmNewCare').value||'').trim()||null,
+        accessories: (document.getElementById('pmNewAccessories').value||'').trim()||null,
+        material: (document.getElementById('pmNewMaterial').value||'').trim()||null,
+        weight: (()=>{const v=document.getElementById('pmNewWeight').value; return v?parseFloat(v):null;})(),
+        dimensions: (document.getElementById('pmNewDim').value||'').trim()||null,
+      };
+      const resp = await pmFetch('/api/sales/products', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+      if (resp.ok) { pmCloseModal('pmAddProductModal'); pmLoadProducts(); } else { alert('Error creating product: ' + await resp.text()); }
+    });
+
+    async function pmEditProduct(id) {
+      const p = pmProducts.find(x => x.id === id);
+      if (!p) return;
+      document.getElementById('pmEditId').value = id;
+      document.getElementById('pmEditName').value = p.name || '';
+      document.getElementById('pmEditCategory').value = p.category || '';
+      document.getElementById('pmEditDesc').value = p.description || '';
+      document.getElementById('pmEditPrice').value = p.standardPrice || '';
+      document.getElementById('pmEditSizeRange').value = p.sizeRange || '';
+      document.getElementById('pmEditFabric').value = p.fabricType || '';
+      document.getElementById('pmEditColours').value = p.colorOptions || '';
+      document.getElementById('pmEditCare').value = p.careInstructions || '';
+      document.getElementById('pmEditAccessories').value = p.accessories || '';
+      document.getElementById('pmEditMaterial').value = p.material || '';
+      document.getElementById('pmEditWeight').value = p.weight || '';
+      document.getElementById('pmEditDim').value = p.dimensions || '';
+      document.getElementById('pmViewCreated').textContent = p.createdAt ? new Date(p.createdAt).toLocaleString() : 'N/A';
+      document.getElementById('pmViewUpdated').textContent = p.updatedAt ? new Date(p.updatedAt).toLocaleString() : 'N/A';
+      document.getElementById('pmEditProductModal').style.display = 'block';
+    }
+
+    document.getElementById('pmEditProductForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('pmEditId').value;
+      const data = {
+        name: document.getElementById('pmEditName').value,
+        category: document.getElementById('pmEditCategory').value,
+        description: document.getElementById('pmEditDesc').value,
+        standardPrice: parseFloat(document.getElementById('pmEditPrice').value || '0'),
+        sizeRange: (document.getElementById('pmEditSizeRange').value||'').trim()||null,
+        fabricType: (document.getElementById('pmEditFabric').value||'').trim()||null,
+        colorOptions: (document.getElementById('pmEditColours').value||'').trim()||null,
+        careInstructions: (document.getElementById('pmEditCare').value||'').trim()||null,
+        accessories: (document.getElementById('pmEditAccessories').value||'').trim()||null,
+        material: (document.getElementById('pmEditMaterial').value||'').trim()||null,
+        weight: (()=>{const v=document.getElementById('pmEditWeight').value; return v?parseFloat(v):null;})(),
+        dimensions: (document.getElementById('pmEditDim').value||'').trim()||null,
+      };
+      const resp = await pmFetch(`/api/sales/products/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+      if (resp.ok) { pmCloseModal('pmEditProductModal'); pmLoadProducts(); } else { alert('Error updating product: ' + await resp.text()); }
+    });
+
+    async function pmDeleteProduct(id) {
+      if (!confirm('Delete this product?')) return;
+      const resp = await pmFetch(`/api/sales/products/${id}`, { method: 'DELETE' });
+      if (resp.ok) pmLoadProducts(); else alert('Error deleting product: ' + await resp.text());
+    }
+
+    // Initial load of products
+    pmLoadProducts();
+  </script>
+</body>
+</html>

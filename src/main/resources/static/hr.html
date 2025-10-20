@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>TGMS — HR Management</title>
+	<link rel="stylesheet" href="css/style.css">
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+<body>
+	<div class="container">
+		<header class="header">
+			<div class="header-content">
+				<h1><i class="fas fa-users"></i> HR Management</h1>
+				<p>Employee directory and records</p>
+				<div class="header-links">
+					<a href="roles.html" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Roles</a>
+				</div>
+			</div>
+		</header>
+		<div class="section-header">
+			<h2><i class="fas fa-id-badge"></i> Employees</h2>
+			<button class="btn btn-primary" onclick="showAddEmployeeModal()"><i class="fas fa-user-plus"></i> Add Employee</button>
+		</div>
+
+		<div class="table-container">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Employee</th>
+						<th>Email</th>
+						<th>Phone</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody id="employeeBody"></tbody>
+			</table>
+		</div>
+
+        <!-- Add Employee Modal -->
+        <div id="addEmployeeModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-plus"></i> Add Employee</h3>
+                    <span class="close" onclick="closeEmployeeModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="employeeForm">
+                        <div class="form-group">
+                            <label for="empName">Full Name</label>
+                            <input type="text" id="empName" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="empRole">Role/Title</label>
+                            <input type="text" id="empRole" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="empEmail">Email</label>
+                            <input type="email" id="empEmail" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="empPhone">Phone</label>
+                            <input type="number" id="empPhone" required />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="closeEmployeeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Add Employee</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Employee Modal -->
+        <div id="editEmployeeModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-edit"></i> Edit Employee</h3>
+                    <span class="close" onclick="closeEditEmployeeModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="editEmployeeForm">
+                        <input type="hidden" id="editEmpId" />
+                        <div class="form-group">
+                            <label for="editEmpName">Full Name</label>
+                            <input type="text" id="editEmpName" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="editEmpRole">Role/Title</label>
+                            <input type="text" id="editEmpRole" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="editEmpEmail">Email</label>
+                            <input type="email" id="editEmpEmail" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="editEmpPhone">Phone</label>
+                            <input type="tel" id="editEmpPhone" required />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="closeEditEmployeeModal()">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script src="js/activity.js"></script>
+        <script>
+            // Backend-wired storage
+            const API_BASE = '/api/hr';
+            let employees = [];
+
+            // Fallback: define metrics updater if not provided elsewhere
+            if (typeof window.updateHrMetrics !== 'function') {
+                window.updateHrMetrics = function(){};
+            }
+
+            // Utility: compute a safe max ID ignoring invalid/non-numeric IDs
+            function safeMaxId(list){
+                const nums = (list || [])
+                    .map(e => (Number.isFinite(e && e.id) ? e.id : Number(e && e.id)))
+                    .filter(n => Number.isFinite(n));
+                return nums.length ? Math.max(...nums) : 0;
+            }
+
+            // Utility: next numeric ID
+            function nextId(){
+                return safeMaxId(employees) + 1;
+            }
+
+            function initials(name=''){
+                const parts = name.trim().split(/\s+/).filter(Boolean);
+                return parts.slice(0,2).map(function(p){ return (p && p[0]) ? p[0].toUpperCase() : ''; }).join('') || '?';
+            }
+
+            async function fetchEmployees(){
+                try {
+                    const res = await fetch(`${API_BASE}/employees`);
+                    employees = await res.json();
+                } catch (e) { console.error('Failed to load employees', e); employees = []; }
+            }
+
+            function renderEmployees(){
+                const body = document.getElementById('employeeBody');
+                if (!body) return;
+                if (!employees || employees.length === 0) {
+                    body.innerHTML = '<tr><td colspan="4" class="text-center">No employees found</td></tr>';
+                    return;
+                }
+                body.innerHTML = employees.map(e => `
+                    <tr>
+                        <td>
+                            <div class="emp">
+                                <div class="avatar">${initials(e.name)}</div>
+                                <div>
+                                    <div class="emp-name">${e.name}</div>
+                                    <div class="emp-meta">${e.role}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${e.email}</td>
+                        <td>${e.phone}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn btn-warning" onclick="showEditEmployeeModal(${e.id})"><i class="fas fa-pen"></i></button>
+                                <button class="action-btn btn-danger" onclick="deleteEmployee(${e.id})"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            function showAddEmployeeModal() {
+                const form = document.getElementById('employeeForm');
+                if (form) form.reset();
+                const modal = document.getElementById('addEmployeeModal');
+                if (modal) modal.style.display = 'block';
+            }
+
+            function closeEmployeeModal() {
+                const modal = document.getElementById('addEmployeeModal');
+                if (modal) modal.style.display = 'none';
+            }
+
+            function showEditEmployeeModal(id) {
+                const emp = employees.find(x => x.id === id);
+                if (!emp) return;
+                document.getElementById('editEmpId').value = emp.id;
+                document.getElementById('editEmpName').value = emp.name || '';
+                document.getElementById('editEmpRole').value = emp.role || '';
+                document.getElementById('editEmpEmail').value = emp.email || '';
+                document.getElementById('editEmpPhone').value = emp.phone || '';
+                document.getElementById('editEmployeeModal').style.display = 'block';
+            }
+
+            function closeEditEmployeeModal() {
+                const modal = document.getElementById('editEmployeeModal');
+                if (modal) modal.style.display = 'none';
+            }
+
+            async function deleteEmployee(id) {
+                if (!confirm('Delete this employee?')) return;
+                try {
+                    const resp = await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE' });
+                    if (!resp.ok) {
+                        const msg = await resp.text();
+                        alert(msg || 'Failed to delete employee');
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Delete failed', e);
+                    alert('Network error while deleting employee');
+                    return;
+                }
+                await fetchEmployees();
+                renderEmployees();
+            }
+
+            document.addEventListener('DOMContentLoaded', async () => {
+                try { if (window.logPageView) logPageView('HR Management'); } catch {}
+                await fetchEmployees();
+                renderEmployees();
+                updateHrMetrics();
+                const addForm = document.getElementById('employeeForm');
+                if (addForm) {
+                    addForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const name = document.getElementById('empName').value.trim();
+                        const role = document.getElementById('empRole').value.trim();
+                        const email = document.getElementById('empEmail').value.trim();
+                        const phone = document.getElementById('empPhone').value.trim();
+                        if (!name || !role || !email || !phone) return;
+                        const payload = { name, role, email, phone, isActive: true };
+                        try {
+                            await fetch(`${API_BASE}/employees`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                        } catch (e) { console.error('Create failed', e); }
+                        await fetchEmployees();
+                        renderEmployees();
+                        updateHrMetrics();
+                        try { if (window.logActivity) logActivity('ADD_EMPLOYEE', name, email); } catch {}
+                        closeEmployeeModal();
+                    });
+                }
+
+                const editForm = document.getElementById('editEmployeeForm');
+                if (editForm) {
+                    editForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const id = Number(document.getElementById('editEmpId').value);
+                        const name = document.getElementById('editEmpName').value.trim();
+                        const role = document.getElementById('editEmpRole').value.trim();
+                        const email = document.getElementById('editEmpEmail').value.trim();
+                        const phone = document.getElementById('editEmpPhone').value.trim();
+                        if (!name || !role || !email || !phone) return;
+                        const payload = { name, role, email, phone, isActive: true };
+                        try {
+                            await fetch(`${API_BASE}/employees/${id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                        } catch (e) { console.error('Update failed', e); }
+                        await fetchEmployees();
+                        renderEmployees();
+                        updateHrMetrics();
+                        try { if (window.logActivity) logActivity('EDIT_EMPLOYEE', name, email); } catch {}
+                        closeEditEmployeeModal();
+                    });
+                }
+            });
+        </script>
+
+    </div>
+    </body>
+    </html>
