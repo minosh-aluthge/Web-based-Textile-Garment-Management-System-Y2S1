@@ -2,12 +2,7 @@ HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
-
-### Test files ###
-src/test/
-**/test/
-**/*Test.java
-**/*Tests.java
+!**/src/test/**/target/
 
 ### STS ###
 .apt_generated
@@ -36,23 +31,3 @@ build/
 
 ### VS Code ###
 .vscode/
-
-### Backup and temporary files ###
-*.bak
-*.backup
-*.orig
-*.prev
-*.old
-*.tmp
-*~
-_archive/
-
-### Environment-specific properties ###
-application-local.properties
-application-prod.properties
-
-### OS-specific files ###
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TGMS - Quality Control Management</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  </head>
+<body>
+<header class="header">
+    <div class="container">
+        <div class="header-content">
+            <h1 class="logo">TGMS</h1>
+            <nav class="nav">
+                <a href="roles.html" class="nav-link">Roles</a>
+                <a href="dashboard.html" class="nav-link">Production</a>
+                <a href="index.html#app" class="nav-link">Sales & Orders</a>
+                <a href="hr.html" class="nav-link">HR</a>
+                <a href="qc.html" class="nav-link active">Quality</a>
+                <a href="attendance.html" class="nav-link">Attendance</a>
+                <a href="support.html" class="nav-link">Support</a>
+            </nav>
+            <div class="user-menu">
+                <span class="user-name">QC Manager</span>
+                <a href="login.html" class="logout-btn">Logout</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+    <div class="container">
+        <div class="section-header">
+            <h2><i class="fas fa-clipboard-check"></i> Quality Control Management</h2>
+            <button class="btn btn-primary" id="openAddModal"><i class="fas fa-plus"></i> New Inspection Report</button>
+        </div>
+
+        <div class="qc-grid">
+            <div class="qc-card pass">
+                <div class="qc-title">Overall Quality Score</div>
+                <div class="metric">94.5%</div>
+                <div class="qc-score">Last 7 days</div>
+            </div>
+            <div class="qc-card">
+                <div class="qc-title">Inspections Today</div>
+                <div class="metric">12</div>
+                <div class="qc-score">Across all products</div>
+            </div>
+            <div class="qc-card pass">
+                <div class="qc-title">Pass Rate</div>
+                <div class="metric">91.3%</div>
+                <div class="qc-score">This month</div>
+            </div>
+            <div class="qc-card fail">
+                <div class="qc-title">Defect Rate</div>
+                <div class="metric">2.1%</div>
+                <div class="qc-score">This month</div>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div class="filter-group">
+                <input class="search-input" type="text" placeholder="Search inspection reports...">
+                <select class="filter-select">
+                    <option>All Results</option>
+                    <option>Passed</option>
+                    <option>Failed</option>
+                    <option>Pending</option>
+                </select>
+                <select class="filter-select">
+                    <option>All Products</option>
+                    <option>T-Shirts</option>
+                    <option>Jeans</option>
+                    <option>Polo Shirts</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Report ID</th>
+                    <th>Batch ID</th>
+                    <th>Product</th>
+                    <th>Inspector</th>
+                    <th>Inspection Date</th>
+                    <th>Quality Score</th>
+                    <th>Result</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>QR-2025-001</td>
+                    <td>B-456</td>
+                    <td>Cotton T-Shirts</td>
+                    <td>Mike Johnson</td>
+                    <td>2025-01-20</td>
+                    <td>95.2%</td>
+                    <td><span class="status-badge status-confirmed">Passed</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm action-btn view"><i class="fas fa-eye"></i> View</button>
+                            <button class="btn btn-warning btn-sm action-btn edit"><i class="fas fa-pen"></i> Edit</button>
+                            <button class="btn btn-danger btn-sm action-btn delete"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>QR-2025-002</td>
+                    <td>B-457</td>
+                    <td>Denim Jeans</td>
+                    <td>Sarah Wilson</td>
+                    <td>2025-01-19</td>
+                    <td>87.8%</td>
+                    <td><span class="status-badge status-cancelled">Failed</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm action-btn view"><i class="fas fa-eye"></i> View</button>
+                            <button class="btn btn-warning btn-sm action-btn edit"><i class="fas fa-pen"></i> Edit</button>
+                            <button class="btn btn-danger btn-sm action-btn delete"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>QR-2025-003</td>
+                    <td>B-458</td>
+                    <td>Polo Shirts</td>
+                    <td>David Brown</td>
+                    <td>2025-01-21</td>
+                    <td>-</td>
+                    <td><span class="status-badge status-pending">Pending</span></td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-secondary btn-sm action-btn view"><i class="fas fa-eye"></i> View</button>
+                            <button class="btn btn-warning btn-sm action-btn edit"><i class="fas fa-pen"></i> Edit</button>
+                            <button class="btn btn-danger btn-sm action-btn delete"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <p>&copy; 2025 TGMS - Developed by SLIIT Team | SE2030 Software Engineering</p>
+    </div>
+</footer>
+
+<!-- Add New Inspection Report Modal -->
+<div id="addInspectionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-clipboard-list"></i> Add New Inspection Report</h3>
+            <span class="close" data-close="addInspectionModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="addInspectionForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="batchId">Batch ID</label>
+                        <input type="text" id="batchId" name="batchId" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="product">Product</label>
+                        <input type="text" id="product" name="product" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inspector">Inspector</label>
+                        <input type="text" id="inspector" name="inspector" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="inspectionDate">Inspection Date</label>
+                        <input type="date" id="inspectionDate" name="inspectionDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="qualityScore">Quality Score (%)</label>
+                        <input type="number" id="qualityScore" name="qualityScore" min="0" max="100" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="result">Result</label>
+                        <select id="result" name="result" required>
+                            <option value="Passed">Passed</option>
+                            <option value="Failed">Failed</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="notes">Inspection Notes</label>
+                    <textarea id="notes" name="notes" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="secondary-btn close-popup-btn">Cancel</button>
+                    <button type="submit" class="primary-btn">Save Inspection Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Inspection Report Popup -->
+<div id="viewInspectionPopup" class="popup">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3>Inspection Report Details</h3>
+            <span class="close-popup">&times;</span>
+        </div>
+        <div class="popup-body">
+            <div class="employee-details">
+                <div class="detail-item">
+                    <span class="detail-label">Report ID</span>
+                    <span id="viewReportId" class="detail-value">QR-2025-001</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Batch ID</span>
+                    <span id="viewBatchId" class="detail-value">B-456</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Product</span>
+                    <span id="viewProduct" class="detail-value">Cotton T-Shirts</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Inspector</span>
+                    <span id="viewInspector" class="detail-value">Mike Johnson</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Inspection Date</span>
+                    <span id="viewInspectionDate" class="detail-value">2025-01-20</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Quality Score</span>
+                    <span id="viewQualityScore" class="detail-value">95.2%</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Result</span>
+                    <span id="viewResult" class="detail-value"><span class="status passed">Passed</span></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Notes</span>
+                    <span id="viewNotes" class="detail-value">All quality metrics passed. Minor improvements needed in stitching.</span>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="secondary-btn close-popup-btn">Close</button>
+                <button type="button" class="primary-btn edit-inspection-btn">Edit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Inspection Report Popup -->
+<div id="editInspectionPopup" class="popup">
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3>Edit Inspection Report</h3>
+            <span class="close-popup">&times;</span>
+        </div>
+        <div class="popup-body">
+            <form id="editInspectionForm">
+                <input type="hidden" id="editReportId" name="editReportId" value="QR-2025-001">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editBatchId">Batch ID</label>
+                        <input type="text" id="editBatchId" name="editBatchId" value="B-456" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editProduct">Product</label>
+                        <input type="text" id="editProduct" name="editProduct" value="Cotton T-Shirts" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editInspector">Inspector</label>
+                        <input type="text" id="editInspector" name="editInspector" value="Mike Johnson" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editInspectionDate">Inspection Date</label>
+                        <input type="date" id="editInspectionDate" name="editInspectionDate" value="2025-01-20" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editQualityScore">Quality Score (%)</label>
+                        <input type="number" id="editQualityScore" name="editQualityScore" value="95.2" min="0" max="100" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="editResult">Result</label>
+                        <select id="editResult" name="editResult" required>
+                            <option value="Passed" selected>Passed</option>
+                            <option value="Failed">Failed</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editNotes">Inspection Notes</label>
+                    <textarea id="editNotes" name="editNotes" rows="3">All quality metrics passed. Minor improvements needed in stitching.</textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="secondary-btn close-popup-btn">Cancel</button>
+                    <button type="submit" class="primary-btn">Update Inspection Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all popups
+        const addInspectionPopup = document.getElementById('addInspectionPopup');
+        const viewInspectionPopup = document.getElementById('viewInspectionPopup');
+        const editInspectionPopup = document.getElementById('editInspectionPopup');
+
+        // Add New Inspection Report button
+        const addInspectionBtn = document.querySelector('.primary-btn');
+        addInspectionBtn.addEventListener('click', function() {
+            addInspectionPopup.style.display = 'block';
+        });
+
+        // View buttons
+        const viewButtons = document.querySelectorAll('.action-btn.view');
+        viewButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // In a real app, you would fetch inspection data here
+                viewInspectionPopup.style.display = 'block';
+            });
+        });
+
+        // Edit buttons
+        const editButtons = document.querySelectorAll('.action-btn.edit');
+        editButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // In a real app, you would fetch inspection data here
+                editInspectionPopup.style.display = 'block';
+            });
+        });
+
+        // Delete buttons
+        const deleteButtons = document.querySelectorAll('.action-btn.delete');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                if(confirm('Are you sure you want to delete this inspection report?')) {
+                    // In a real app, you would handle deletion here
+                    alert('Inspection report deleted - implement your backend logic');
+                }
+            });
+        });
+
+        // Close popup functionality
+        const closeButtons = document.querySelectorAll('.close-popup, .close-popup-btn');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                addInspectionPopup.style.display = 'none';
+                viewInspectionPopup.style.display = 'none';
+                editInspectionPopup.style.display = 'none';
+            });
+        });
+
+        // Edit button in View popup
+        const editInspectionBtn = document.querySelector('.edit-inspection-btn');
+        editInspectionBtn.addEventListener('click', function() {
+            viewInspectionPopup.style.display = 'none';
+            editInspectionPopup.style.display = 'block';
+
+            // In a real app, you would populate edit form with inspection data here
+        });
+
+        // Handle form submissions
+        const addInspectionForm = document.getElementById('addInspectionForm');
+        const editInspectionForm = document.getElementById('editInspectionForm');
+
+        addInspectionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Here you would typically send data to your backend
+            addInspectionPopup.style.display = 'none';
+            // For demo purposes only - you mentioned you'll handle backend manually
+            alert('Inspection report added successfully - you can now implement your backend logic');
+        });
+
+        editInspectionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Here you would typically send data to your backend
+            editInspectionPopup.style.display = 'none';
+            // For demo purposes only - you mentioned you'll handle backend manually
+            alert('Inspection report updated successfully - you can now implement your backend logic');
+        });
+
+        // Close popups when clicking outside
+        window.addEventListener('click', function(e) {
+            if (e.target === addInspectionPopup) addInspectionPopup.style.display = 'none';
+            if (e.target === viewInspectionPopup) viewInspectionPopup.style.display = 'none';
+            if (e.target === editInspectionPopup) editInspectionPopup.style.display = 'none';
+        });
+    });
+</script>
+</body>
+</html>

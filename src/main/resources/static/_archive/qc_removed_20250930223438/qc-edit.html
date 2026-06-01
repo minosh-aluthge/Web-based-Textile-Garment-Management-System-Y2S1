@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TGMS — Edit Inspection Report</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+</head>
+<body>
+  <!-- Global header to match qc.html -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <h1 class="logo">TGMS</h1>
+        <nav class="nav">
+          <a href="roles.html" class="nav-link">Roles</a>
+          <a href="dashboard.html" class="nav-link">Production</a>
+          <a href="index.html#app" class="nav-link">Sales & Orders</a>
+          <a href="hr.html" class="nav-link">HR</a>
+          <a href="qc.html" class="nav-link active">Quality</a>
+          <a href="attendance.html" class="nav-link">Attendance</a>
+          <a href="support.html" class="nav-link">Support</a>
+        </nav>
+        <div class="user-menu">
+          <span class="user-name">QC Manager</span>
+          <a href="login.html" class="logout-btn">Logout</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container">
+      <div class="section-header">
+        <h2><i class="fas fa-clipboard-check"></i> Edit Inspection Report</h2>
+        <div>
+          <a class="btn btn-secondary" href="qc.html"><i class="fas fa-arrow-left"></i> Back to Quality</a>
+        </div>
+      </div>
+
+      <div class="tab-content active" style="display:block;">
+      <form id="editForm">
+        <div class="form-group">
+          <label for="batchId">Batch ID</label>
+          <input id="batchId" type="text" required />
+        </div>
+        <div class="form-group">
+          <label for="product">Product</label>
+          <input id="product" type="text" required />
+        </div>
+        <div class="form-group">
+          <label for="inspector">Inspector</label>
+          <input id="inspector" type="text" required />
+        </div>
+        <div class="form-group">
+          <label for="inspectionDate">Inspection Date</label>
+          <input id="inspectionDate" type="date" required />
+        </div>
+        <div class="form-group">
+          <label for="qualityScore">Quality Score (%)</label>
+          <input id="qualityScore" type="number" min="0" max="100" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label for="result">Result</label>
+          <select id="result" required>
+            <option value="Passed">Passed</option>
+            <option value="Failed">Failed</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="notes">Inspection Notes</label>
+          <textarea id="notes" rows="5"></textarea>
+        </div>
+
+        <div class="modal-footer" style="display:flex; gap:10px; padding:0; border-top:none;">
+          <button type="button" class="btn btn-secondary" onclick="history.back()"><i class="fas fa-times"></i> Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+        </div>
+      </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2025 TGMS - Developed by SLIIT Team | SE2030 Software Engineering</p>
+    </div>
+  </footer>
+
+  <script>
+    function fromQuery(name){
+      const u = new URL(location.href);
+      return u.searchParams.get(name) || '';
+    }
+
+    function populateFromObj(o){
+      if (!o) return;
+      const map = {
+        batchId: 'batchId', product: 'product', inspector: 'inspector',
+        inspectionDate: 'inspectionDate', qualityScore: 'qualityScore',
+        result: 'result', notes: 'notes'
+      };
+      Object.keys(map).forEach(k => {
+        const el = document.getElementById(map[k]);
+        if (!el) return;
+        if (k === 'inspectionDate' && o[k]) {
+          // normalize date to yyyy-MM-dd if possible
+          try { el.value = o[k].substring(0,10); } catch { el.value = o[k]; }
+        } else {
+          el.value = (o[k] ?? '').toString();
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Preferred: read object from localStorage
+      let obj = null;
+      try { obj = JSON.parse(localStorage.getItem('tgms_qc_edit') || 'null'); } catch {}
+
+      // Fallback: read minimal fields from query params
+      if (!obj) {
+        obj = {
+          batchId: fromQuery('batch'),
+          product: fromQuery('product'),
+          inspector: fromQuery('inspector'),
+          inspectionDate: fromQuery('date'),
+          qualityScore: fromQuery('score'),
+          result: fromQuery('result'),
+          notes: fromQuery('notes')
+        };
+      }
+      populateFromObj(obj);
+
+      const form = document.getElementById('editForm');
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        alert('Saved! (Wire this to backend when ready)');
+        // Optionally update localStorage and return to QC
+        try { localStorage.removeItem('tgms_qc_edit'); } catch {}
+        window.location.href = 'qc.html';
+      });
+    });
+  </script>
+</body>
+</html>
